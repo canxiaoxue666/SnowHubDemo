@@ -1,31 +1,366 @@
 -- 自我验证
 if Snow ~= "Snow Hub团队" then
-    error("Snow Hub 团队验证失败")
 local player = game:GetService("Players").LocalPlayer
-
 local function selfKick()
     -- 尝试寻找现有的踢出机制
     for _,v in pairs(getconnections(player.Idled)) do
         v:Disable() -- 防止AFK踢出干扰
     end
-    
     -- 创建虚拟远程事件
     local fakeEvent = Instance.new("RemoteEvent")
     fakeEvent.Name = "KickPlayer"
     fakeEvent.Parent = game:GetService("ReplicatedStorage")
-    
     -- 触发自我踢出
-    fakeEvent:FireServer(player, "Snow Hub团队验证失败踢出")
-    
+    fakeEvent:FireServer(player, "Snow Hub团队验证失败")
     -- 备用方法
     if not player.Parent then return end
-    player:Kick("Snow Hub团队验证失败踢出")
+    player:Kick("Snow Hub团队验证失败")
 end
-
 selfKick()
     return
 end
+print("Snow Hub团队验证成功")
+game:GetService("StarterGui"):SetCore("SendNotification",{
+	    Title = "Snow";
+	    Text = "Snow Hub团队验证成功";
+	    Duration = 5;
+		
+        })
+--头文件以及其他
+local Player = game:GetService("Players").LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
+-- 获取目标文件夹
+local goldFolder = workspace:FindFirstChild("Game")
+                  and workspace.Game:FindFirstChild("Entities")
+                  and workspace.Game.Entities:FindFirstChild("GoldJewelSafe")
+
+local jewelFolder = workspace:FindFirstChild("Game")
+                  and workspace.Game:FindFirstChild("Entities")
+                  and workspace.Game.Entities:FindFirstChild("JewelSafe")
+
+-- 存储UI和状态
+local screenGui
+local statsFrame
+local modelTextMap = {}
+local goldCount = 0
+local blackCount = 0
+local isEnabled = false
+
+-- 文本标签参数
+local FONT_SIZE = 24
+local TEXT_WIDTH = 120
+local TEXT_HEIGHT = 40
+local TEXT_OFFSET = Vector3.new(0, 2, 0)
+
+-- 创建UI元素
+local function createUI()
+    if screenGui and screenGui.Parent then return end
+    
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "JewelDisplay"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
+
+    -- 创建左上角统计窗口
+    statsFrame = Instance.new("Frame")
+    statsFrame.Name = "InsuranceStats"
+    statsFrame.Size = UDim2.new(0, 180, 0, 80)
+    statsFrame.Position = UDim2.new(0, 10, 0, 10)
+    statsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    statsFrame.BackgroundTransparency = 0.5
+    statsFrame.BorderSizePixel = 0
+    statsFrame.Parent = screenGui
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "Title"
+    titleLabel.Size = UDim2.new(1, 0, 0, 25)
+    titleLabel.Position = UDim2.new(0, 0, 0, 0)
+    titleLabel.Text = "保险统计"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Font = Enum.Font.SourceSansBold
+    titleLabel.TextSize = 18
+    titleLabel.Parent = statsFrame
+
+    local goldCountLabel = Instance.new("TextLabel")
+    goldCountLabel.Name = "GoldCount"
+    goldCountLabel.Size = UDim2.new(1, 0, 0, 25)
+    goldCountLabel.Position = UDim2.new(0, 0, 0, 25)
+    goldCountLabel.Text = "金保险: 0"
+    goldCountLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+    goldCountLabel.BackgroundTransparency = 1
+    goldCountLabel.Font = Enum.Font.SourceSans
+    goldCountLabel.TextSize = 16
+    goldCountLabel.TextXAlignment = Enum.TextXAlignment.Left
+    goldCountLabel.Parent = statsFrame
+
+    local blackCountLabel = Instance.new("TextLabel")
+    blackCountLabel.Name = "BlackCount"
+    blackCountLabel.Size = UDim2.new(1, 0, 0, 25)
+    blackCountLabel.Position = UDim2.new(0, 0, 0, 50)
+    blackCountLabel.Text = "黑保险: 0"
+    blackCountLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+    blackCountLabel.BackgroundTransparency = 1
+    blackCountLabel.Font = Enum.Font.SourceSans
+    blackCountLabel.TextSize = 16
+    blackCountLabel.TextXAlignment = Enum.TextXAlignment.Left
+    blackCountLabel.Parent = statsFrame
+end
+
+-- 销毁UI元素
+local function destroyUI()
+    if screenGui then
+        screenGui:Destroy()
+        screenGui = nil
+        statsFrame = nil
+    end
+    
+    -- 清除所有文本标签
+    for model, data in pairs(modelTextMap) do
+        if data and data.label then
+            data.label:Destroy()
+        end
+    end
+    modelTextMap = {}
+    goldCount = 0
+    blackCount = 0
+end
+
+-- 更新统计显示
+local function updateStatsDisplay()
+    if not statsFrame then return end
+    
+    local goldLabel = statsFrame:FindFirstChild("GoldCount")
+    local blackLabel = statsFrame:FindFirstChild("BlackCount")
+    
+    if goldLabel then goldLabel.Text = "金保险: "..goldCount end
+    if blackLabel then blackLabel.Text = "黑保险: "..blackCount end
+end
+
+-- 检查是否是Door模型
+local function isDoorModel(model)
+    return model.Name == "Door"
+end
+
+-- 创建/更新单个Model的文本标签
+local function updateModelText(model)
+    if not isEnabled then return end
+    
+    -- 跳过Door模型
+    if isDoorModel(model) then
+        if modelTextMap[model] then
+            if modelTextMap[model].isGold then
+                goldCount = goldCount - 1
+            else
+                blackCount = blackCount - 1
+            end
+            modelTextMap[model].label:Destroy()
+            modelTextMap[model] = nil
+            updateStatsDisplay()
+        end
+        return
+    end
+
+    -- 确定模型属于哪个文件夹
+    local isGold = goldFolder and model:IsDescendantOf(goldFolder)
+    local isBlack = jewelFolder and model:IsDescendantOf(jewelFolder)
+    
+    if not isGold and not isBlack then return end
+
+    -- 设置文本和颜色
+    local text, textColor, strokeColor
+    if isGold then
+        text = "金保险"
+        textColor = Color3.fromRGB(255, 200, 0)
+        strokeColor = Color3.fromRGB(100, 80, 0)
+    else
+        text = "黑保险"
+        textColor = Color3.fromRGB(0, 0, 0)
+        strokeColor = Color3.fromRGB(50, 50, 50)
+    end
+
+    -- 获取或创建文本标签
+    local data = modelTextMap[model]
+    
+    if not data and model:IsA("Model") then
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Name = (isGold and "GoldLabel_" or "BlackLabel_")..model.Name
+        textLabel.Size = UDim2.new(0, TEXT_WIDTH, 0, TEXT_HEIGHT)
+        textLabel.Text = text
+        textLabel.TextSize = FONT_SIZE
+        textLabel.Font = Enum.Font.SourceSansBold
+        textLabel.TextColor3 = textColor
+        textLabel.BackgroundTransparency = 1
+        textLabel.TextStrokeTransparency = 0.5
+        textLabel.TextStrokeColor3 = strokeColor
+        textLabel.Parent = screenGui
+        
+        data = {
+            label = textLabel,
+            isGold = isGold
+        }
+        modelTextMap[model] = data
+        
+        -- 更新计数
+        if isGold then
+            goldCount = goldCount + 1
+        else
+            blackCount = blackCount + 1
+        end
+        updateStatsDisplay()
+    elseif data then
+        -- 更新现有标签
+        data.label.Text = text
+        data.label.TextColor3 = textColor
+        data.label.TextStrokeColor3 = strokeColor
+    end
+
+    -- 更新位置
+    if data then
+        local part = model:FindFirstChildOfClass("BasePart") or model.PrimaryPart
+        if part then
+            local position, onScreen = workspace.CurrentCamera:WorldToScreenPoint(part.Position + TEXT_OFFSET)
+            if onScreen then
+                data.label.Position = UDim2.new(0, position.X - TEXT_WIDTH/2, 0, position.Y - TEXT_HEIGHT/2)
+                data.label.Visible = true
+                return
+            end
+        end
+        data.label.Visible = false
+    end
+end
+
+-- 清理无效文本标签
+local function cleanupTextLabels()
+    for model, data in pairs(modelTextMap) do
+        if not model.Parent or not data.label.Parent then
+            if data.isGold then
+                goldCount = goldCount - 1
+            else
+                blackCount = blackCount - 1
+            end
+            data.label:Destroy()
+            modelTextMap[model] = nil
+            updateStatsDisplay()
+        end
+    end
+end
+
+-- 初始化现有Model
+local function initializeExistingModels()
+    if goldFolder then
+        for _, model in ipairs(goldFolder:GetDescendants()) do
+            if model:IsA("Model") then
+                updateModelText(model)
+            end
+        end
+    end
+    
+    if jewelFolder then
+        for _, model in ipairs(jewelFolder:GetDescendants()) do
+            if model:IsA("Model") then
+                updateModelText(model)
+            end
+        end
+    end
+end
+
+-- 监听Model变化
+local function setupFolderListeners(folder)
+    if not folder then return end
+    
+    folder.DescendantAdded:Connect(function(descendant)
+        if descendant:IsA("Model") then
+            task.wait(0.5)
+            updateModelText(descendant)
+        end
+    end)
+
+    folder.DescendantRemoving:Connect(function(descendant)
+        if modelTextMap[descendant] then
+            if modelTextMap[descendant].isGold then
+                goldCount = goldCount - 1
+            else
+                blackCount = blackCount - 1
+            end
+            modelTextMap[descendant].label:Destroy()
+            modelTextMap[descendant] = nil
+            updateStatsDisplay()
+        end
+    end)
+end
+
+-- 开关控制
+local function toggleJewelDisplay(value)
+    isEnabled = value
+    
+    if value then
+        createUI()
+        initializeExistingModels()
+        setupFolderListeners(goldFolder)
+        setupFolderListeners(jewelFolder)
+        
+        -- 启动每帧更新
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if not isEnabled then return end
+            cleanupTextLabels()
+            for model in pairs(modelTextMap) do
+                updateModelText(model)
+            end
+        end)
+    else
+        destroyUI()
+    end
+end
+--黑市
+-- 黑市互动功能
+     hs = function()
+    while hshd and task.wait() do
+        local prompt = game:GetService("Workspace")
+            :FindFirstChild("BlackMarket")
+            and game.Workspace.BlackMarket:FindFirstChild("Dealer")
+            and game.Workspace.BlackMarket.Dealer:FindFirstChild("Dealer")
+            and game.Workspace.BlackMarket.Dealer.Dealer:FindFirstChildOfClass("ProximityPrompt")
+        
+        if prompt then
+            prompt.HoldDuration = 0
+            prompt.MaxActivationDistance = 99999
+            fireproximityprompt(game:GetService("Workspace").BlackMarket.Dealer.Dealer.ProximityPrompt)
+        end
+    end
+end
+jshd = function()
+local function modifyPrompt(prompt)
+    prompt.HoldDuration = 0
+end
+
+-- 检查 ProximityPrompt 是否在目标路径下
+local function isTargetPrompt(prompt)
+    local parent = prompt.Parent
+    while parent do
+        if parent == workspace.Game.Entities or parent == workspace.BankRobbery.VaultDoor then
+            return true
+        end
+        parent = parent.Parent
+    end
+    return false
+end
+
+-- 修改现有的目标 ProximityPrompt
+for _, prompt in ipairs(workspace:GetDescendants()) do
+    if prompt:IsA("ProximityPrompt") and isTargetPrompt(prompt) then
+        modifyPrompt(prompt)
+    end
+end
+
+-- 监听新生成的 ProximityPrompt
+workspace.DescendantAdded:Connect(function(instance)
+    if instance:IsA("ProximityPrompt") and isTargetPrompt(instance) then
+        modifyPrompt(instance)
+    end
+end)
+end
 -- 以下是脚本原本的代码...
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/canxiaoxue666/SnowHubDemo/refs/heads/main/SnowGui", true))()
 local window = library:new("Snow Hub")
@@ -39,10 +374,11 @@ GG:Label("测试人员: 鸭脖 冷艳 1ELvin")
 GG:Label("感谢一切帮助过我的人")
 GG:Label("持续更新中……")
 GG:Label("官方Q群: 514428696")
-GG:Label("CXHUB永久免费使用 谢谢你的支持")
+GG:Label("SnowHub永久免费使用 谢谢你的支持")
 GG:Label("原名咸鱼 用过的都说好")
 local main = window:Tab("玩家", "17261153594")
-local Player = main:section("玩家", false)
+local Player = main:section("玩家", true)
+
 Player:Toggle("连跳","", false, function(Value)
 Jump = Value
 game.UserInputService.JumpRequest:Connect(function()
@@ -76,34 +412,10 @@ end)
 Player:Button("小范围(枪械无范围)",function()  
     _G.HeadSize = 20 _G.Disabled = true game:GetService('RunService').RenderStepped:connect(function() if _G.Disabled then for i,v in next, game:GetService('Players'):GetPlayers() do if v.Name ~= game:GetService('Players').LocalPlayer.Name then pcall(function() v.Character.HumanoidRootPart.Size = Vector3.new(_G.HeadSize,_G.HeadSize,_G.HeadSize) v.Character.HumanoidRootPart.Transparency = 0.7 v.Character.HumanoidRootPart.BrickColor = BrickColor.new("Really blue") v.Character.HumanoidRootPart.Material = "Neon" v.Character.HumanoidRootPart.CanCollide = false end) end end end end)
 end)
-
-local main = window:Tab("脚本中心", "17261153594")
-local jbzx = main:section("脚本中心", true)
-jbzx:Button("星云v2[卡密XYXV2]",function()  
-loadstring(game:HttpGet("https://rentry.co/XYV2A/raw"))()
-end)
-jbzx:Button("落叶中心",function()  
-getgenv().LS="落叶中心" loadstring(game:HttpGet("https://raw.githubusercontent.com/krlpl/Deciduous-center-LS/main/%E8%90%BD%E5%8F%B6%E4%B8%AD%E5%BF%83%E6%B7%B7%E6%B7%86.txt"))()
-end)
-jbzx:Button("king脚本",function()  
-KingScript = "By King" Roblox= "新飞月二飞春"
-KingTeam= "KingQQ新主群https://qm.qq.com/q/SU0hmhIvwk" 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ShenJiaoBen/ShenJiaoBen/main/King-------------Script.txt"))()
-end)
-jbzx:Button("剑客V4",function()  
-jianke_V4 = "作者_初夏"
-jianke__V4 = "作者QQ1412152634"
-jianke___V4 = "剑客QQ群347724155"
-loadstring(game:HttpGet(('https://raw.githubusercontent.com/JianKeCX/JianKeV4/main/ChuXia')))()
-end)
-jbzx:Button("林脚本破解",function()  
-AL = "Advanced Logic团队破解"
-loadstring(game:HttpGet("https://raw.githubusercontent.com/longshu886/longscript/main/linpojie"))()
-end)
 local main = window:Tab("俄亥俄州", "17261153594")
-local ehez = main:section("俄亥俄州", false)
-ehez:Label("功能全部有效 不会封禁物品栏功能")
-ehez:Toggle("自动捡现金(服务器刷新现金自动传送拾取)","", false, function(v)
+local ehez = main:section("俄亥俄州[自动以及赚钱类]", false)
+ehez:Label("所有功能全部有效")
+ehez:Toggle("自动捡现金(未测试 会封禁物品栏)","", false, function(v)
 ItemFarm = v
 if ItemFarm then
 pcall(function()
@@ -155,47 +467,14 @@ wait(0.3)
 end)
 end
 end)
-ehez:Toggle("自动抢银行(服务器刷新银行自动传送)","", false, function(v)
-cailiao = v
-if cailiao then
-     local gem = Game.Workspace.GemRobbery:FindFirstChild("Rubble")--查找
-    if gem == false then
-
-    
-    
-    
-    else
-    game.Workspace.BankRobbery.VaultDoor.Door.Attachment.ProximityPrompt.HoldDuration = 0
-local epoh4 = CFrame.new(1075.6588, 8.2661, -344.9450)
-local epoh5 = game:GetService("Players")
-local epoh6 = epoh5.LocalPlayer.Character.HumanoidRootPart
-epoh6.CFrame = epoh4
-wait(1)
-  game:GetService("VirtualInputManager"):SendKeyEvent(true, "E", false, game)
-  wait(3)
-    game.Workspace.BankRobbery.VaultDoor.Door.Attachment.ProximityPrompt.HoldDuration = 0
-local epoh4 = CFrame.new(1058, 8.76, -343)
-local epoh5 = game:GetService("Players")
-local epoh6 = epoh5.LocalPlayer.Character.HumanoidRootPart
-epoh6.CFrame = epoh4
-wait(0.5)
- game:GetService("VirtualInputManager"):SendKeyEvent(true, "E", false, game)
-  game:GetService("VirtualInputManager"):SendKeyEvent(true, "E", false, game)
-   game:GetService("VirtualInputManager"):SendKeyEvent(true, "E", false, game)
-    game:GetService("VirtualInputManager"):SendKeyEvent(true, "E", false, game)
-    end
-end
-isVisible = not isVisible
+ehez:Toggle("保险绘制(及统计)", "", false, function(value)
+    toggleJewelDisplay(value)
 end)
 ehez:Toggle("远程黑市","", false, function(v)
-game.Workspace.BlackMarket.Dealer.Dealer.ProximityPrompt.HoldDuration = 0
-heishi = v
-if heishi then
-game.Workspace.BlackMarket.Dealer.Dealer.ProximityPrompt.MaxActivationDistance = 10000
-else
-game.Workspace.BlackMarket.Dealer.Dealer.ProximityPrompt.MaxActivationDistance = 20
-end
-isVisible = not isVisible
+hshd = v
+            if hshd then
+                hs()
+            end
 end)
 ehez:Toggle("自动收集材料(服务器刷新材料自动传送拾取)","", false, function(v)
 cailiao = v
@@ -342,131 +621,129 @@ end
                 task.wait()
             end
         end
-        game:GetService("StarterGui"):SetCore("SendNotification",{
-	    Title = "咸鱼";
-	    Text = "自动更换服务器需购买高级版";
-	    Duration = math.huge;
-		
-        })
 end
 isVisible = not isVisible
 end)
-ehez:Button("秒开空投",function()  
-local safe = game.workspace.Game.Airdrops.Airdrop
-safe.Airdrop.ProximityPrompt.HoldDuration = 0
-end)
-ehez:Button("远程保险",function()  
+ehez:Toggle("远程保险[点击背包]","", false, function()
 game:GetService("Players").LocalPlayer.PlayerGui.Backpack.Holder.Locker.Visible = true
 end)
-ehez:Button("预判自瞄",function()  
-loadstring(game:HttpGet("https://pastebin.com/raw/cyFeu4kP"))()
+ehez:Toggle("即时互动","", false, function()
+local function modifyPrompt(prompt)
+    prompt.HoldDuration = 0
+end
+
+-- 检查 ProximityPrompt 是否在目标路径下
+local function isTargetPrompt(prompt)
+    local parent = prompt.Parent
+    while parent do
+        if parent == workspace.Game.Entities or parent == workspace.BankRobbery.VaultDoor then
+            return true
+        end
+        parent = parent.Parent
+    end
+    return false
+end
+
+-- 修改现有的目标 ProximityPrompt
+for _, prompt in ipairs(workspace:GetDescendants()) do
+    if prompt:IsA("ProximityPrompt") and isTargetPrompt(prompt) then
+        modifyPrompt(prompt)
+    end
+end
+
+-- 监听新生成的 ProximityPrompt
+workspace.DescendantAdded:Connect(function(instance)
+    if instance:IsA("ProximityPrompt") and isTargetPrompt(instance) then
+        modifyPrompt(instance)
+    end
 end)
-ehez:Button("保险秒开",function()  
-local jmk = game.workspace.Game.Entities.GoldJewelSafe.GoldJewelSafe
-jmk.Door["Meshes/LargeSafe_Cube.002_Cube.003_None (1)"].Attachment.ProximityPrompt.HoldDuration = 0
-local hmk = game.workspace.Game.Entities.JewelSafe.JewelSafe
-hmk.Door["Meshes/LargeSafe_Cube.002_Cube.003_None (1)"].Attachment.ProximityPrompt.HoldDuration = 0
 end)
-ehez:Button("秒填弹药箱",function()  
-for i = 1 , 50 do
+ehez:Toggle("秒填弹药箱","", false, function(yhsx)
+while AutoRobBank and task.wait() do
 local ammobx = game.workspace.Game.Local.droppables["Ammo Box"]
 ammobx.Handle.ProximityPrompt.HoldDuration = 0
 ammobx.Name = "ammoopen"
 end
 end)
-ehez:Button("珠宝秒拿",function()  
-	local rocks = game.workspace.GemRobbery.JewelryCases.HighYieldSpawns
-    for _, obj in pairs(rocks:GetChildren()) do
-        if obj.ClassName == "Model" then
-            for _, innerObj in pairs(obj:GetChildren()) do
-                if innerObj.ClassName == "Model" then
-                    if innerObj.Name == "Case" then
-                        -- 什么也不做
-                    elseif innerObj.Name == "Emerald" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Sapphire" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Amethyst" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Topaz" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end						
-					elseif innerObj.Name == "Diamond" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Gold Bar" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Ruby" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    else
-                        if innerObj:FindFirstChild("Box") and innerObj.Box:FindFirstChild("ProximityPrompt") then
-                            innerObj.Box.ProximityPrompt.HoldDuration = 0
-                        end
-                    end
+ehez:Toggle("秒拿珠宝","", false, function(mnzb)
+while mnzb and task.wait() do
+local gemNames = {
+    "Emerald", "Sapphire", "Amethyst", "Topaz", 
+    "Diamond", "Gold Bar", "Ruby"
+}
+
+-- 处理单个模型对象的函数
+local function processModel(model)
+    for _, innerObj in pairs(model:GetChildren()) do
+        if innerObj.ClassName == "Model" then
+            -- 跳过Case对象
+            if innerObj.Name == "Case" then
+                -- 什么都不做
+            -- 检查是否是已知的宝石类型
+            elseif table.find(gemNames, innerObj.Name) then
+                if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
+                    innerObj.Handle.ProximityPrompt.HoldDuration = 0
+                end
+            -- 其他情况处理Box对象
+            else
+                if innerObj:FindFirstChild("Box") and innerObj.Box:FindFirstChild("ProximityPrompt") then
+                    innerObj.Box.ProximityPrompt.HoldDuration = 0
                 end
             end
         end
     end
-	
-	local rocks2 = game.workspace.GemRobbery.JewelryCases.LowYieldSpawns
-    for _, obj in pairs(rocks2:GetChildren()) do
+end
+
+-- 处理指定路径下的所有模型
+local function processFolder(folderPath)
+    for _, obj in pairs(folderPath:GetChildren()) do
         if obj.ClassName == "Model" then
-            for _, innerObj in pairs(obj:GetChildren()) do
-                if innerObj.ClassName == "Model" then
-                    if innerObj.Name == "Case" then
-                        -- 什么也不做
-                    elseif innerObj.Name == "Emerald" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Sapphire" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Amethyst" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Topaz" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-					elseif innerObj.Name == "Diamond" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Gold Bar" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    elseif innerObj.Name == "Ruby" then
-                        if innerObj:FindFirstChild("Handle") and innerObj.Handle:FindFirstChild("ProximityPrompt") then
-                            innerObj.Handle.ProximityPrompt.HoldDuration = 0
-                        end
-                    else
-                        if innerObj:FindFirstChild("Box") and innerObj.Box:FindFirstChild("ProximityPrompt") then
-                            innerObj.Box.ProximityPrompt.HoldDuration = 0
-                        end
-                    end
-                end
-            end
+            processModel(obj)
         end
-    end  
+    end
+end
+
+-- 处理高产出和低产出两个区域
+processFolder(game.workspace.GemRobbery.JewelryCases.HighYieldSpawns)
+processFolder(game.workspace.GemRobbery.JewelryCases.LowYieldSpawns)
+end
 end)
-ehez:Button("秒开银行",function()  
+ehez:Toggle("秒开银行","", false, function(mkyh)
+while mkyh and task.wait() do
 game.Workspace.BankRobbery.VaultDoor.Door.Attachment.ProximityPrompt.HoldDuration = 0
+end
+end)
+ehez:Toggle("银行刷新提醒","", false, function(yhsx)
+while yhsx and task.wait() do
+    wait(0.1)--防止卡，不能删！！！
+    local bank = game.workspace.BankRobbery.BankCash.Cash:FindFirstChild("Bundle")--查找
+    if bank then--判断
+        wait(5)--冷却时间
+        game:GetService("StarterGui"):SetCore("SendNotification",{--提示
+            Title = "Snow",
+            Text = "银行已刷新",
+            Duration = 2,
+            Button1 = "确定"       
+
+        })
+    end
+end
+end)
+ehez:Toggle("珠宝店刷新提醒","", false, function(zbdsx)
+while zbdsx and task.wait() do
+    wait(0.1)--防止卡，不能删！！！
+    local gem = Game.Workspace.GemRobbery:FindFirstChild("Rubble")--查找
+    if gem then--判断
+        wait(5)--冷却时间
+        game:GetService("StarterGui"):SetCore("SendNotification",{--提示
+            Title = "Snow",
+            Text = "珠宝店已刷新",
+            Duration = 2,
+            Button1 = "确定"       
+
+        })
+    end
+end
 end)
 ehez:Button("传送银行",function()  
 local epoh4 = CFrame.new(1053,10,-338)
@@ -480,59 +757,54 @@ local epoh5 = game:GetService("Players")
 local epoh6 = epoh5.LocalPlayer.Character.HumanoidRootPart
 epoh6.CFrame = epoh4
 end)
-ehez:Button("银行刷新提醒",function()  
-while true do
-    wait(0.1)--防止卡，不能删！！！
-    local bank = game.workspace.BankRobbery.BankCash.Cash:FindFirstChild("Bundle")--查找
-    if bank then--判断
-        wait(1)--冷却时间
-        game:GetService("StarterGui"):SetCore("SendNotification",{--提示
-            Title = "BY.咸鱼",
-            Text = "银行已刷新",
-            Duration = math.huge,
-            Button1 = "确定"       
-
-        })
-		wait(1)--冷却时间
-        game:GetService("StarterGui"):SetCore("SendNotification",{
-	    Title = "BY.咸鱼";
-	    Text = "脚本加载完成";
-	    Duration = math.huge;
-		
-        })
+local eheyl = main:section("俄亥俄州[娱乐功能]", false)
+-- 加载UI库
+-- 添加文本编辑框（用于输入嘲讽内容）
+eheyl:Textbox(
+    "输入嘲讽内容",          -- 文本框标签
+    "taunt_message",     -- 唯一标识符（flag）
+    "Snow NO1",       -- 默认文本
+    function(text)       -- 回调函数（当内容改变时触发）
+        print("嘲讽内容已更新:", text)
+        _G.TauntMessage = text -- 存储到全局变量
     end
-end
-end)
-ehez:Button("珠宝店刷新提醒",function()  
-while true do
-    wait(0.1)--防止卡，不能删！！！
-    local gem = Game.Workspace.GemRobbery:FindFirstChild("Rubble")--查找
-    if gem then--判断
-        wait(1)--冷却时间
-        game:GetService("StarterGui"):SetCore("SendNotification",{--提示
-            Title = "BY.咸鱼",
-            Text = "珠宝店已刷新",
-            Duration = math.huge,
-            Button1 = "确定"       
+)
 
-        })
-		wait(1)--冷却时间
-        game:GetService("StarterGui"):SetCore("SendNotification",{
-	    Title = "BY.咸鱼";
-	    Text = "脚本加载完成";
-	    Duration = math.huge;
-		
-        })
+-- 添加嘲讽开关（开启后自动循环发送，关闭停止）
+local tauntEnabled = false
+local tauntInterval = 2 -- 发送间隔(秒)
+
+eheyl:Toggle("嘲讽开关", "", false, function(state)
+    tauntEnabled = state
+    if state then
+        -- 开启时启动循环发送
+        spawn(function()
+            while tauntEnabled do
+                if _G.TauntMessage then
+                    local TextChatService = game:GetService("TextChatService")
+                    local chatSystem = TextChatService.TextChannels.RBXGeneral
+                    if chatSystem then
+                        chatSystem:SendAsync(_G.TauntMessage)
+                    end
+                else
+                    warn("请先输入嘲讽内容！")
+                    tauntEnabled = false
+                    -- 这里可以添加代码自动关闭开关
+                    break
+                end
+                wait(tauntInterval) -- 等待指定间隔
+            end
+        end)
+    else
+
     end
-end
 end)
-ehez:Button("双倍资金",function()  
-game:GetService("Players").LocalPlayer.PlayerGui.Money.Container.premium.Visible = true
-game:GetService("Players").LocalPlayer.PlayerGui.Money.Container.premium.TextLabel.Text = "BY.咸鱼"
-game:GetService("Players").LocalPlayer.PlayerGui.Money.Container["2x cash"].Visible = true
-game:GetService("Players").LocalPlayer.PlayerGui.Money.Container["2x cash"].TextLabel.Text = "Ohio双倍资金"
+
+-- 添加间隔时间调整滑块（可选）
+eheyl:Slider("嘲讽间隔", "taunt_interval", 1, 1, 10, false, function(value)
+    tauntInterval = value
 end)
-local ehezcs = main:section("传送界面", false)
+local ehezcs = main:section("俄亥俄州[传送界面]", false)
 ehezcs:Label("食品类")
 ehezcs:Button("大咖啡厅",function()  
 local epoh4 = CFrame.new(1358.65, 8.496, -326.6818)
