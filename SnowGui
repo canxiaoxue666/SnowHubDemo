@@ -18,11 +18,10 @@ local services =
 
 local mouse = services.Players.LocalPlayer:GetMouse()
 
--- 全局颜色设置
+-- 颜色设置
 local MainColor = Color3.fromRGB(98, 37, 184)  -- 主紫色
 local Background = Color3.fromRGB(30, 20, 50)  -- 深紫色背景
 local zyColor = Color3.fromRGB(70, 30, 130)    -- 次级紫色
-local beijingColor = Color3.fromRGB(200, 180, 255) -- 浅紫色
 local TextColor = Color3.fromRGB(240, 230, 255) -- 浅色文字
 local AccentColor = Color3.fromRGB(180, 80, 220) -- 强调色
 
@@ -32,7 +31,7 @@ function Tween(obj, t, data)
     return true
 end
 
--- 水波纹效果（优化版）
+-- 水波纹效果
 function Ripple(obj)
     spawn(
         function()
@@ -211,11 +210,11 @@ function library.new(library, name, theme)
     MainStroke.Transparency = 0.7
     MainStroke.Parent = Main
 
-    -- 标签内容区
+    -- 标签内容区 (修复了背景透明问题)
     TabMain.Name = "TabMain"
     TabMain.Parent = Main
-    TabMain.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    TabMain.BackgroundTransparency = 1.000
+    TabMain.BackgroundColor3 = Background
+    TabMain.BackgroundTransparency = 0.2
     TabMain.Position = UDim2.new(0.25, 0, 0, 10)
     TabMain.Size = UDim2.new(0, 440, 0, 380)
 
@@ -296,7 +295,7 @@ function library.new(library, name, theme)
     DropShadow.ScaleType = Enum.ScaleType.Slice
     DropShadow.SliceCenter = Rect.new(50, 50, 450, 450)
 
-    -- 切换按钮
+    -- 切换按钮 (修复了隐藏UI功能)
     ToggleBtn.Name = "ToggleBtn"
     ToggleBtn.Parent = dogent
     ToggleBtn.BackgroundColor3 = zyColor
@@ -326,14 +325,14 @@ function library.new(library, name, theme)
     -- 拖拽功能
     drag(Main)
 
-    -- UI显示/隐藏功能
+    -- UI显示/隐藏功能 (改为真正的隐藏/显示)
     local isVisible = true
     ToggleBtn.MouseButton1Click:Connect(function()
         if isVisible then
-            Tween(Main, {0.3, "Quint", "Out"}, {Position = UDim2.new(0.5, 0, 1.5, 0)})
+            Main.Visible = false
             ToggleBtn.Text = "显示UI"
         else
-            Tween(Main, {0.3, "Quint", "Out"}, {Position = UDim2.new(0.5, 0, 0.5, 0)})
+            Main.Visible = true
             ToggleBtn.Text = "隐藏UI"
         end
         isVisible = not isVisible
@@ -367,8 +366,8 @@ function library.new(library, name, theme)
         Tab.Name = "Tab"
         Tab.Parent = TabMain
         Tab.Active = true
-        Tab.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        Tab.BackgroundTransparency = 1.000
+        Tab.BackgroundColor3 = Background
+        Tab.BackgroundTransparency = 0.2
         Tab.Size = UDim2.new(1, 0, 1, 0)
         Tab.ScrollBarThickness = 3
         Tab.ScrollBarImageColor3 = AccentColor
