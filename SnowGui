@@ -494,25 +494,39 @@ UIGradientTitle.Color = ColorSequence.new {
     )
     Open.Name = "Open"
 Open.Parent = dogent
-Open.BackgroundColor3 = Color3.fromRGB(28, 33, 55)
-Open.BackgroundTransparency = 0 -- 调整按钮的透明度，0为完全不透明，1为完全透明
+Open.BackgroundColor3 = Color3.fromRGB(98, 37, 209)  -- 紫色背景
+Open.BackgroundTransparency = 0.7
 Open.Position = UDim2.new(0.00829315186, 0, 0.31107837, 0)
 Open.Size = UDim2.new(0, 61, 0, 32)
 Open.Font = Enum.Font.SourceSans
-Open.Text = "咸鱼Script\n隐藏"
+Open.Text = "Snow Hub\n隐藏"
 Open.TextColor3 = Color3.fromRGB(255, 255, 255)
-Open.TextTransparency = 0 -- 文字的透明度，0为完全不透明，1为完全透明
+Open.TextTransparency = 0.8
 Open.TextSize = 14.000
 Open.Active = true
 Open.Draggable = true
+
+-- 添加圆角效果
+local UICorner = Instance.new("UICorner", Open)
+UICorner.CornerRadius = UDim.new(0, 8)  -- 圆角半径8像素
+
+-- 添加悬停效果
+Open.MouseEnter:Connect(function()
+    Open.BackgroundColor3 = Color3.fromRGB(118, 57, 229)  -- 更亮的紫色
+end)
+
+Open.MouseLeave:Connect(function()
+    Open.BackgroundColor3 = Color3.fromRGB(98, 37, 209)  -- 恢复原紫色
+end)
+
 local isVisible = true
 Open.MouseButton1Click:Connect(function()
     if isVisible then
         Main.Visible = false
-		Open.Text = "咸鱼Script\n显示"
+		Open.Text = "Snow Hub\n显示"
     else
         Main.Visible = true
-		Open.Text = "咸鱼Script\n隐藏"
+		Open.Text = "Snow Hub\n隐藏"
     end
        isVisible = not isVisible
 end)
