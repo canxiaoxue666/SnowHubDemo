@@ -1,0 +1,225 @@
+local Notification = {}
+
+-- 创建主GUI容器（如果不存在）
+local GUI = game:GetService("CoreGui"):FindFirstChild("Snow_Notification") 
+if not GUI then 
+    local Snow_Notification = Instance.new("ScreenGui")
+    local Snow_NotificationUIListLayout = Instance.new("UIListLayout")
+    
+    Snow_Notification.Name = "Snow_Notification"
+    Snow_Notification.Parent = game.CoreGui
+    Snow_Notification.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    Snow_Notification.ResetOnSpawn = false
+    
+    Snow_NotificationUIListLayout.Name = "Snow_NotificationUIListLayout"
+    Snow_NotificationUIListLayout.Parent = Snow_Notification
+    Snow_NotificationUIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    Snow_NotificationUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    Snow_NotificationUIListLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+    Snow_NotificationUIListLayout.Padding = UDim.new(0, 5) -- 添加间距
+end
+
+function Notification:Notify(notifData, middleData, extraData)
+    local SelectedType = string.lower(tostring(middleData.Type))
+    local GUI = game:GetService("CoreGui"):FindFirstChild("Snow_Notification")
+    
+    -- 主容器
+    local mainContainer = Instance.new("Frame")
+    mainContainer.Name = "SnowNotification"
+    mainContainer.Parent = GUI
+    mainContainer.AnchorPoint = Vector2.new(1, 1)
+    mainContainer.BackgroundTransparency = 1
+    mainContainer.Position = UDim2.new(1, -10, 1, -10)
+    mainContainer.Size = UDim2.new(0, 0, 0, 0)
+    mainContainer.ZIndex = 10
+    
+    -- 阴影效果
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "Shadow"
+    shadow.Parent = mainContainer
+    shadow.BackgroundTransparency = 1
+    shadow.Size = UDim2.new(1, 10, 1, 10)
+    shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
+    shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+    shadow.Image = "rbxassetid://5554236805" -- 柔和的阴影
+    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.ImageTransparency = 0.7
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    shadow.ZIndex = 9
+    
+    -- 主窗口
+    local window = Instance.new("Frame")
+    window.Name = "Window"
+    window.Parent = mainContainer
+    window.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    window.BackgroundTransparency = 0.1
+    window.BorderSizePixel = 0
+    window.Size = UDim2.new(0, 250, 0, 0)
+    window.ZIndex = 10
+    window.ClipsDescendants = true
+    
+    -- 圆角效果
+    local corner = Instance.new("UICorner")
+    corner.Parent = window
+    corner.CornerRadius = UDim.new(0, 8)
+    
+    -- 顶部装饰条
+    local topBar = Instance.new("Frame")
+    topBar.Name = "TopBar"
+    topBar.Parent = window
+    topBar.BackgroundColor3 = middleData.OutlineColor or Color3.fromRGB(50, 120, 200)
+    topBar.BorderSizePixel = 0
+    topBar.Size = UDim2.new(1, 0, 0, 3)
+    topBar.ZIndex = 11
+    
+    -- 标题
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Parent = window
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.new(0, 15, 0, 10)
+    title.Size = UDim2.new(1, -30, 0, 20)
+    title.ZIndex = 11
+    title.Font = Enum.Font.GothamSemibold
+    title.Text = notifData.Title or "Notification"
+    title.TextColor3 = Color3.fromRGB(240, 240, 240)
+    title.TextSize = 14
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    
+    -- 描述
+    local description = Instance.new("TextLabel")
+    description.Name = "Description"
+    description.Parent = window
+    description.BackgroundTransparency = 1
+    description.Position = UDim2.new(0, 15, 0, 35)
+    description.Size = UDim2.new(1, -30, 1, -50)
+    description.ZIndex = 11
+    description.Font = Enum.Font.Gotham
+    description.Text = notifData.Description or ""
+    description.TextColor3 = Color3.fromRGB(180, 180, 180)
+    description.TextSize = 12
+    description.TextWrapped = true
+    description.TextXAlignment = Enum.TextXAlignment.Left
+    description.TextYAlignment = Enum.TextYAlignment.Top
+    
+    -- 淡入动画
+    window:TweenSize(UDim2.new(0, 250, 0, 90), "Out", "Quad", 0.3, true)
+    mainContainer:TweenSize(UDim2.new(0, 250, 0, 90), "Out", "Quad", 0.3, true)
+    
+    -- 根据类型添加额外内容
+    if SelectedType == "image" then
+        window.Size = UDim2.new(0, 250, 0, 90)
+        title.Position = UDim2.new(0, 40, 0, 10)
+        
+        local icon = Instance.new("ImageLabel")
+        icon.Name = "Icon"
+        icon.Parent = window
+        icon.BackgroundTransparency = 1
+        icon.Position = UDim2.new(0, 10, 0, 10)
+        icon.Size = UDim2.new(0, 25, 0, 25)
+        icon.ZIndex = 11
+        icon.Image = extraData.Image or ""
+        icon.ImageColor3 = extraData.ImageColor or Color3.fromRGB(255, 255, 255)
+        
+    elseif SelectedType == "option" then
+        window.Size = UDim2.new(0, 250, 0, 120)
+        
+        local buttonContainer = Instance.new("Frame")
+        buttonContainer.Name = "ButtonContainer"
+        buttonContainer.Parent = window
+        buttonContainer.BackgroundTransparency = 1
+        buttonContainer.Position = UDim2.new(0, 15, 0, 70)
+        buttonContainer.Size = UDim2.new(1, -30, 0, 30)
+        buttonContainer.ZIndex = 11
+        
+        local decline = Instance.new("TextButton")
+        decline.Name = "Decline"
+        decline.Parent = buttonContainer
+        decline.BackgroundColor3 = Color3.fromRGB(80, 25, 25)
+        decline.BackgroundTransparency = 0.5
+        decline.BorderSizePixel = 0
+        decline.Position = UDim2.new(0, 0, 0, 0)
+        decline.Size = UDim2.new(0.45, 0, 1, 0)
+        decline.ZIndex = 12
+        decline.Font = Enum.Font.Gotham
+        decline.Text = "Decline"
+        decline.TextColor3 = Color3.fromRGB(255, 120, 120)
+        decline.TextSize = 12
+        
+        local accept = Instance.new("TextButton")
+        accept.Name = "Accept"
+        accept.Parent = buttonContainer
+        accept.BackgroundColor3 = Color3.fromRGB(25, 80, 25)
+        accept.BackgroundTransparency = 0.5
+        accept.BorderSizePixel = 0
+        accept.Position = UDim2.new(0.55, 0, 0, 0)
+        accept.Size = UDim2.new(0.45, 0, 1, 0)
+        accept.ZIndex = 12
+        accept.Font = Enum.Font.Gotham
+        accept.Text = "Accept"
+        accept.TextColor3 = Color3.fromRGB(120, 255, 120)
+        accept.TextSize = 12
+        
+        -- 圆角按钮
+        local declineCorner = Instance.new("UICorner")
+        declineCorner.Parent = decline
+        declineCorner.CornerRadius = UDim.new(0, 6)
+        
+        local acceptCorner = Instance.new("UICorner")
+        acceptCorner.Parent = accept
+        acceptCorner.CornerRadius = UDim.new(0, 6)
+        
+        -- 按钮交互
+        decline.MouseEnter:Connect(function()
+            decline.BackgroundTransparency = 0.3
+        end)
+        
+        decline.MouseLeave:Connect(function()
+            decline.BackgroundTransparency = 0.5
+        end)
+        
+        accept.MouseEnter:Connect(function()
+            accept.BackgroundTransparency = 0.3
+        end)
+        
+        accept.MouseLeave:Connect(function()
+            accept.BackgroundTransparency = 0.5
+        end)
+        
+        -- 按钮点击事件
+        decline.MouseButton1Click:Connect(function()
+            pcall(function() extraData.Callback(false) end)
+            closeNotification()
+        end)
+        
+        accept.MouseButton1Click:Connect(function()
+            pcall(function() extraData.Callback(true) end)
+            closeNotification()
+        end)
+    end
+    
+    -- 关闭通知的函数
+    local function closeNotification()
+        window:TweenSize(UDim2.new(0, 250, 0, 0), "Out", "Quad", 0.3, true)
+        mainContainer:TweenSize(UDim2.new(0, 250, 0, 0), "Out", "Quad", 0.3, true)
+        wait(0.3)
+        mainContainer:Destroy()
+    end
+    
+    -- 自动关闭计时器
+    if middleData.Time then
+        spawn(function()
+            wait(middleData.Time)
+            if mainContainer and mainContainer.Parent then
+                closeNotification()
+            end
+        end)
+    end
+    
+    return {
+        Close = closeNotification
+    }
+end
+
+return Notification
