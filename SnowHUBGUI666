@@ -415,65 +415,89 @@ function library.new(library, name, theme)
         end
     )
 
--- 打开/关闭按钮（图片版）
+-- 打开/关闭按钮（圆形图片版）
 Open.Name = "Open"
 Open.Parent = dogent
 Open.BackgroundColor3 = Background
-Open.BackgroundTransparency = Transparency
+Open.BackgroundTransparency = 1  -- 完全透明背景
 Open.Position = UDim2.new(0.00829315186, 0, 0.31107837, 0)
-Open.Size = UDim2.new(0, 61, 0, 32)
-Open.Font = Enum.Font.SourceSans
+Open.Size = UDim2.new(0, 60, 0, 60)  -- 增大为60x60圆形按钮
 Open.Text = ""  -- 清空文本
 Open.TextTransparency = 1  -- 完全透明文本
-Open.TextSize = 14.000
 Open.Active = true
 Open.Draggable = true
 
--- 添加图片
-local OpenImage = Instance.new("ImageLabel")
-OpenImage.Name = "OpenImage"
-OpenImage.Parent = Open
-OpenImage.BackgroundTransparency = 1
-OpenImage.Size = UDim2.new(1, 0, 1, 0)
-OpenImage.Image = "rbxassetid://7734068321"  -- 替换为你的默认图片ID
-OpenImage.ScaleType = Enum.ScaleType.Fit
+-- 添加圆形图片容器
+local ImageButton = Instance.new("ImageButton")
+ImageButton.Name = "ImageButton"
+ImageButton.Parent = Open
+ImageButton.AnchorPoint = Vector2.new(0.5, 0.5)
+ImageButton.Position = UDim2.new(0.5, 0, 0.5, 0)
+ImageButton.Size = UDim2.new(1, 0, 1, 0)
+ImageButton.BackgroundTransparency = 1
+ImageButton.Image = "rbxassetid://1234567890"  -- 默认图片ID
+ImageButton.ScaleType = Enum.ScaleType.Fit
 
--- 按钮圆角
-local UICorner = Instance.new("UICorner", Open)
-UICorner.CornerRadius = UDim.new(0, 8)
+-- 圆形效果
+local UICorner = Instance.new("UICorner", ImageButton)
+UICorner.CornerRadius = UDim.new(1, 0)  -- 完全圆形
 
--- 按钮悬停效果
-Open.MouseEnter:Connect(function()
+-- 悬停效果
+ImageButton.MouseEnter:Connect(function()
     game:GetService("TweenService"):Create(
-        Open,
+        ImageButton,
         TweenInfo.new(0.2),
-        {BackgroundTransparency = HoverTransparency}
+        {Size = UDim2.new(1.1, 0, 1.1, 0)}  -- 悬停时轻微放大
     ):Play()
 end)
 
-Open.MouseLeave:Connect(function()
+ImageButton.MouseLeave:Connect(function()
     game:GetService("TweenService"):Create(
-        Open,
+        ImageButton,
         TweenInfo.new(0.2),
-        {BackgroundTransparency = Transparency}
+        {Size = UDim2.new(1, 0, 1, 0)}  -- 恢复原大小
     ):Play()
 end)
 
+-- 点击效果
 local isVisible = true
-local hiddenImage = "rbxassetid://7734068321"  -- 替换为"隐藏"状态的图片ID
-local shownImage = "rbxassetid://7734068321"  -- 替换为"显示"状态的图片ID
+local hiddenImage = "rbxassetid://0987654321"  -- 隐藏状态图片
+local shownImage = "rbxassetid://1234567890"  -- 显示状态图片
 
-Open.MouseButton1Click:Connect(function()
+ImageButton.MouseButton1Click:Connect(function()
     if isVisible then
         Main.Visible = false
-        OpenImage.Image = hiddenImage
+        ImageButton.Image = hiddenImage
+        -- 点击动画
+        game:GetService("TweenService"):Create(
+            ImageButton,
+            TweenInfo.new(0.1),
+            {Size = UDim2.new(0.9, 0, 0.9, 0)}
+        ):Play()
+        wait(0.1)
+        game:GetService("TweenService"):Create(
+            ImageButton,
+            TweenInfo.new(0.1),
+            {Size = UDim2.new(1, 0, 1, 0)}
+        ):Play()
     else
         Main.Visible = true
-        OpenImage.Image = shownImage
+        ImageButton.Image = shownImage
+        -- 点击动画
+        game:GetService("TweenService"):Create(
+            ImageButton,
+            TweenInfo.new(0.1),
+            {Size = UDim2.new(0.9, 0, 0.9, 0)}
+        ):Play()
+        wait(0.1)
+        game:GetService("TweenService"):Create(
+            ImageButton,
+            TweenInfo.new(0.1),
+            {Size = UDim2.new(1, 0, 1, 0)}
+        ):Play()
     end
     isVisible = not isVisible
 end)
-
     UIG.Parent = Open
     local window = {}
     
