@@ -1,207 +1,137 @@
+-- 黑暗风格UI库增强版
 repeat
     task.wait()
 until game:IsLoaded()
-
 local library = {}
 local ToggleUI = false
 library.currentTab = nil
 library.flags = {}
 
--- 高级服务封装
+-- 服务快捷访问
 local services = setmetatable({}, {
     __index = function(t, k)
         return game:GetService(k)
     end
 })
 
--- 高级材质效果
-local MaterialAssets = {
-    Ripple = "rbxassetid://2708891598",
-    DropShadow = "rbxassetid://6015897843",
-    ArrowDown = "rbxassetid://6031302934",
-    ArrowUp = "rbxassetid://6031302932",
-    ToggleOn = "rbxassetid://7072718262",
-    ToggleOff = "rbxassetid://7072717836",
-    SliderHandle = "rbxassetid://7072723420",
-    BackgroundNoise = "rbxassetid://7133341362"
-}
-
--- 高级颜色配置
-local ColorPalette = {
-    Dark = {
-        Primary = Color3.fromRGB(15, 15, 20),
-        Secondary = Color3.fromRGB(25, 25, 35),
-        Tertiary = Color3.fromRGB(40, 40, 50),
-        Accent = Color3.fromRGB(100, 150, 255),
-        Text = Color3.fromRGB(240, 240, 240),
-        Error = Color3.fromRGB(255, 80, 80),
-        Success = Color3.fromRGB(80, 255, 80)
-    },
-    Animations = {
-        HoverGlow = Color3.fromRGB(150, 180, 255),
-        ClickEffect = Color3.fromRGB(120, 160, 255)
-    }
-}
-
--- 高级鼠标效果
+-- 动画效果增强
+local tweenService = services.TweenService
+local runService = services.RunService
+local userInputService = services.UserInputService
 local mouse = services.Players.LocalPlayer:GetMouse()
 
--- 高级动画系统
-local AdvancedTween = {
-    EasingStyles = {
-        Linear = Enum.EasingStyle.Linear,
-        Sine = Enum.EasingStyle.Sine,
-        Quad = Enum.EasingStyle.Quad,
-        Quart = Enum.EasingStyle.Quart,
-        Quint = Enum.EasingStyle.Quint,
-        Elastic = Enum.EasingStyle.Elastic,
-        Bounce = Enum.EasingStyle.Bounce
-    },
-    
-    Tween = function(obj, t, data, callback)
-        local tween = services.TweenService:Create(
-            obj, 
-            TweenInfo.new(t[1], t[2], t[3] or Enum.EasingDirection.InOut), 
-            data
-        )
-        if callback then
-            tween.Completed:Connect(callback)
-        end
-        tween:Play()
-        return tween
-    end,
-    
-    ComplexTween = function(obj, tweens, sequenceDelay)
-        local sequence = {}
-        for i, t in ipairs(tweens) do
-            table.insert(sequence, AdvancedTween.Tween(obj, t.time, t.properties, function()
-                if t.callback then t.callback() end
-                task.wait(sequenceDelay or 0.1)
-            end))
-        end
-        return sequence
+-- 高级动画函数
+function Tween(obj, t, data, callback)
+    local tweenInfo = TweenInfo.new(t[1], Enum.EasingStyle[t[2]], Enum.EasingDirection[t[3]])
+    local tween = tweenService:Create(obj, tweenInfo, data)
+    tween:Play()
+    if callback then
+        tween.Completed:Connect(callback)
     end
-}
+    return tween
+end
 
 -- 高级波纹效果
-function RippleEffect(obj, color)
+function Ripple(obj, color)
     spawn(function()
         if obj.ClipsDescendants ~= true then
             obj.ClipsDescendants = true
         end
         
-        local Ripple = Instance.new("ImageLabel")
-        Ripple.Name = "RippleEffect"
+        local Ripple = Instance.new("Frame")
+        Ripple.Name = "Ripple"
         Ripple.Parent = obj
-        Ripple.BackgroundTransparency = 1
+        Ripple.BackgroundColor3 = color or Color3.fromRGB(100, 150, 255)
+        Ripple.BackgroundTransparency = 0.8
         Ripple.ZIndex = 10
-        Ripple.Image = MaterialAssets.Ripple
-        Ripple.ImageTransparency = 0.9
-        Ripple.ScaleType = Enum.ScaleType.Fit
-        Ripple.ImageColor3 = color or ColorPalette.Animations.ClickEffect
         Ripple.AnchorPoint = Vector2.new(0.5, 0.5)
-        Ripple.Position = UDim2.new(
-            (mouse.X - obj.AbsolutePosition.X) / obj.AbsoluteSize.X,
-            0,
-            (mouse.Y - obj.AbsolutePosition.Y) / obj.AbsoluteSize.Y,
-            0
-        )
+        
+        local mousePos = Vector2.new(mouse.X, mouse.Y)
+        local objPos = Vector2.new(obj.AbsolutePosition.X, obj.AbsolutePosition.Y)
+        local objSize = Vector2.new(obj.AbsoluteSize.X, obj.AbsoluteSize.Y)
+        
+        local pos = (mousePos - objPos) / objSize
+        Ripple.Position = UDim2.new(pos.X, 0, pos.Y, 0)
         Ripple.Size = UDim2.new(0, 0, 0, 0)
         
-        -- 复杂动画序列
-        AdvancedTween.ComplexTween(Ripple, {
-            {
-                time = {0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out},
-                properties = {
-                    Size = UDim2.new(2, 0, 2, 0),
-                    Position = UDim2.new(-0.5, 0, -0.5, 0),
-                    ImageTransparency = 0.7
-                }
-            },
-            {
-                time = {0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In},
-                properties = {
-                    ImageTransparency = 1,
-                    Size = UDim2.new(2.5, 0, 2.5, 0)
-                },
-                callback = function()
-                    Ripple:Destroy()
-                end
-            }
-        })
+        local UICorner = Instance.new("UICorner", Ripple)
+        UICorner.CornerRadius = UDim.new(1, 0)
+        
+        -- 波纹扩散动画
+        Tween(Ripple, {0.5, "Quad", "Out"}, {
+            Size = UDim2.new(2, 0, 2, 0),
+            Position = UDim2.new(pos.X, -objSize.X/2, pos.Y, -objSize.Y/2),
+            BackgroundTransparency = 1
+        }, function()
+            Ripple:Destroy()
+        end)
     end)
 end
 
--- 高级标签切换系统
+-- 标签切换动画增强
 local switchingTabs = false
-function SwitchTab(new)
+function switchTab(new)
     if switchingTabs then return end
     local old = library.currentTab
     
+    if old == nil then
+        new[2].Visible = true
+        library.currentTab = new
+        Tween(new[1], {0.15, "Quint", "Out"}, {ImageTransparency = 0})
+        Tween(new[1].TabText, {0.15, "Quint", "Out"}, {TextTransparency = 0})
+        return
+    end
+
+    if old[1] == new[1] then return end
+    
     switchingTabs = true
     library.currentTab = new
+
+    -- 旧标签淡出
+    Tween(old[1], {0.15, "Quint", "Out"}, {ImageTransparency = 0.5})
+    Tween(old[1].TabText, {0.15, "Quint", "Out"}, {TextTransparency = 0.5})
     
-    -- 旧标签淡出动画
-    if old then
-        AdvancedTween.ComplexTween(old[1], {
-            {time = {0.15, Enum.EasingStyle.Quint}, properties = {ImageTransparency = 0.5}},
-            {time = {0.1, Enum.EasingStyle.Quad}, properties = {ImageTransparency = 0.8}}
-        })
-        
-        AdvancedTween.ComplexTween(old[1].TabText, {
-            {time = {0.15, Enum.EasingStyle.Quint}, properties = {TextTransparency = 0.5}},
-            {time = {0.1, Enum.EasingStyle.Quad}, properties = {TextTransparency = 0.8}}
-        })
-        
-        old[2].Visible = false
-    end
+    -- 新标签淡入
+    Tween(new[1], {0.15, "Quint", "Out"}, {ImageTransparency = 0})
+    Tween(new[1].TabText, {0.15, "Quint", "Out"}, {TextTransparency = 0})
     
-    -- 新标签淡入动画
-    AdvancedTween.ComplexTween(new[1], {
-        {time = {0.15, Enum.EasingStyle.Quint}, properties = {ImageTransparency = 0.3}},
-        {time = {0.1, Enum.EasingStyle.Quad}, properties = {ImageTransparency = 0}}
-    })
-    
-    AdvancedTween.ComplexTween(new[1].TabText, {
-        {time = {0.15, Enum.EasingStyle.Quint}, properties = {TextTransparency = 0.3}},
-        {time = {0.1, Enum.EasingStyle.Quad}, properties = {TextTransparency = 0}}
-    })
-    
+    -- 内容切换动画
+    old[2].Visible = false
     new[2].Visible = true
     
-    task.wait(0.2)
-    switchingTabs = false
+    task.delay(0.15, function()
+        switchingTabs = false
+    end)
 end
 
--- 高级拖拽系统
-function AdvancedDrag(frame, hold)
-    hold = hold or frame
-    local dragging, dragInput, dragStart, startPos
+-- 拖拽功能增强
+function drag(frame, hold)
+    if not hold then hold = frame end
     
-    local function Update(input)
+    local dragging
+    local dragInput
+    local dragStart
+    local startPos
+    local dragSpeed = 0.1 -- 拖拽平滑度
+
+    local function update(input)
         local delta = input.Position - dragStart
-        frame.Position = UDim2.new(
+        local newPos = UDim2.new(
             startPos.X.Scale, 
             startPos.X.Offset + delta.X, 
             startPos.Y.Scale, 
             startPos.Y.Offset + delta.Y
         )
+        
+        -- 平滑移动
+        Tween(frame, {dragSpeed, "Quad", "Out"}, {Position = newPos})
     end
-    
+
     hold.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = frame.Position
-            
-            -- 拖拽开始效果
-            AdvancedTween.Tween(frame, {0.1, Enum.EasingStyle.Quad}, {
-                Size = UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset + 2, frame.Size.Y.Scale, frame.Size.Y.Offset + 2)
-            }, function()
-                AdvancedTween.Tween(frame, {0.1, Enum.EasingStyle.Quad}, {
-                    Size = UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset - 2, frame.Size.Y.Scale, frame.Size.Y.Offset - 2)
-                })
-            end)
             
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
@@ -210,26 +140,22 @@ function AdvancedDrag(frame, hold)
             end)
         end
     end)
-    
+
     frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
-    
-    services.UserInputService.InputChanged:Connect(function(input)
+
+    userInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
-            Update(input)
+            update(input)
         end
     end)
 end
 
--- 主库函数
-function library.new(name, config)
-    config = config or {}
-    local theme = config.theme or "Dark"
-    local accentColor = config.accentColor or ColorPalette.Dark.Accent
-    
+-- 主UI创建函数
+function library.new(library, name, theme)
     -- 清理旧UI
     for _, v in next, services.CoreGui:GetChildren() do
         if v.Name == "DarkUI_Library" then
@@ -237,1089 +163,996 @@ function library.new(name, config)
         end
     end
 
-    -- 主UI实例
-    local DarkUI = Instance.new("ScreenGui")
-    DarkUI.Name = "DarkUI_Library"
-    DarkUI.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    DarkUI.ResetOnSpawn = false
-    
-    if syn and syn.protect_gui then
-        syn.protect_gui(DarkUI)
-    end
-    DarkUI.Parent = services.CoreGui
-
-    -- 主窗口框架
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    MainFrame.BackgroundColor3 = ColorPalette.Dark.Primary
-    MainFrame.BackgroundTransparency = 0.2
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    MainFrame.Size = UDim2.new(0, 600, 0, 400)
-    MainFrame.ZIndex = 1
-    MainFrame.Active = true
-    MainFrame.Parent = DarkUI
-    
-    -- 高级圆角
-    local MainCorner = Instance.new("UICorner")
-    MainCorner.CornerRadius = UDim.new(0, 12)
-    MainCorner.Name = "MainCorner"
-    MainCorner.Parent = MainFrame
-    
-    -- 动态边框效果
-    local BorderEffect = Instance.new("Frame")
-    BorderEffect.Name = "BorderEffect"
-    BorderEffect.BackgroundColor3 = Color3.new(1, 1, 1)
-    BorderEffect.BorderSizePixel = 0
-    BorderEffect.Size = UDim2.new(1, 0, 1, 0)
-    BorderEffect.ZIndex = 0
-    BorderEffect.Parent = MainFrame
-    
-    local BorderGradient = Instance.new("UIGradient")
-    BorderGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0.00, accentColor),
-        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(100, 255, 100)),
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(100, 100, 255)),
-        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255, 255, 100)),
-        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 100, 255))
+    -- 高级配色方案
+    local colorScheme = {
+        main = Color3.fromRGB(20, 20, 25),
+        secondary = Color3.fromRGB(30, 30, 40),
+        accent = Color3.fromRGB(100, 150, 255),
+        text = Color3.fromRGB(220, 220, 220),
+        darkText = Color3.fromRGB(50, 50, 50),
+        highlight = Color3.fromRGB(120, 170, 255),
+        shadow = Color3.fromRGB(0, 0, 0, 0.6)
     }
-    BorderGradient.Rotation = 90
-    BorderGradient.Parent = BorderEffect
+
+    -- 透明度设置
+    local transparency = {
+        main = 0.2,
+        hover = 0.1,
+        element = 0.3,
+        disabled = 0.7
+    }
+
+    -- 创建主UI容器
+    local uiContainer = Instance.new("ScreenGui")
+    uiContainer.Name = "DarkUI_Library"
+    uiContainer.ResetOnSpawn = false
+    uiContainer.ZIndexBehavior = Enum.ZIndexBehavior.Global
     
-    local BorderCorner = Instance.new("UICorner")
-    BorderCorner.CornerRadius = UDim.new(0, 12)
-    BorderCorner.Parent = BorderEffect
+    -- 保护UI
+    if syn and syn.protect_gui then
+        syn.protect_gui(uiContainer)
+    end
+    uiContainer.Parent = services.CoreGui
+
+    -- UI销毁函数
+    function library.Destroy()
+        uiContainer:Destroy()
+    end
+
+    -- UI切换函数
+    function library.Toggle()
+        ToggleUI = not ToggleUI
+        uiContainer.Enabled = ToggleUI
+    end
+
+    -- 主窗口
+    local mainWindow = Instance.new("Frame")
+    mainWindow.Name = "MainWindow"
+    mainWindow.Parent = uiContainer
+    mainWindow.AnchorPoint = Vector2.new(0.5, 0.5)
+    mainWindow.BackgroundColor3 = colorScheme.main
+    mainWindow.BackgroundTransparency = transparency.main
+    mainWindow.BorderSizePixel = 0
+    mainWindow.Position = UDim2.new(0.5, 0, 0.5, 0)
+    mainWindow.Size = UDim2.new(0, 600, 0, 400)
+    mainWindow.ZIndex = 2
+    mainWindow.Active = true
+
+    -- 主窗口圆角
+    local mainCorner = Instance.new("UICorner", mainWindow)
+    mainCorner.CornerRadius = UDim.new(0, 12)
+
+    -- 高级阴影效果
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "Shadow"
+    shadow.Parent = mainWindow
+    shadow.BackgroundTransparency = 1
+    shadow.Size = UDim2.new(1, 30, 1, 30)
+    shadow.Position = UDim2.new(0, -15, 0, -15)
+    shadow.Image = "rbxassetid://1316045217"
+    shadow.ImageColor3 = colorScheme.shadow
+    shadow.ImageTransparency = 0.5
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(50, 50, 450, 450)
+    shadow.ZIndex = 1
+
+    -- 动态渐变背景
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, colorScheme.main),
+        ColorSequenceKeypoint.new(1, colorScheme.secondary)
+    })
+    gradient.Rotation = 45
+    gradient.Parent = mainWindow
+
+    -- 动态渐变动画
+    local gradientTween = tweenService:Create(
+        gradient,
+        TweenInfo.new(15, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+        {Rotation = 360}
+    )
+    gradientTween:Play()
+
+    -- 彩色边框效果
+    local border = Instance.new("Frame")
+    border.Name = "Border"
+    border.Parent = mainWindow
+    border.BackgroundColor3 = Color3.new(1, 1, 1)
+    border.BorderSizePixel = 0
+    border.Size = UDim2.new(1, 4, 1, 4)
+    border.Position = UDim2.new(0, -2, 0, -2)
+    border.ZIndex = 0
+    
+    local borderGradient = Instance.new("UIGradient", border)
+    borderGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 100)),
+        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(100, 255, 100)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(100, 100, 255)),
+        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255, 255, 100)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 255))
+    })
+    borderGradient.Rotation = 90
+    
+    local borderCorner = Instance.new("UICorner", border)
+    borderCorner.CornerRadius = UDim.new(0, 14)
     
     -- 边框动画
-    local borderTween = services.TweenService:Create(
-        BorderGradient,
-        TweenInfo.new(8, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+    local borderTween = tweenService:Create(
+        borderGradient,
+        TweenInfo.new(10, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
         {Rotation = 360}
     )
     borderTween:Play()
-    
-    -- 高级阴影效果
-    local ShadowHolder = Instance.new("Frame")
-    ShadowHolder.Name = "ShadowHolder"
-    ShadowHolder.BackgroundTransparency = 1
-    ShadowHolder.BorderSizePixel = 0
-    ShadowHolder.Size = UDim2.new(1, 0, 1, 0)
-    ShadowHolder.ZIndex = 0
-    ShadowHolder.Parent = MainFrame
-    
-    local Shadow = Instance.new("ImageLabel")
-    Shadow.Name = "Shadow"
-    Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-    Shadow.BackgroundTransparency = 1
-    Shadow.BorderSizePixel = 0
-    Shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
-    Shadow.Size = UDim2.new(1, 50, 1, 50)
-    Shadow.ZIndex = 0
-    Shadow.Image = MaterialAssets.DropShadow
-    Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    Shadow.ImageTransparency = 0.6
-    Shadow.ScaleType = Enum.ScaleType.Slice
-    Shadow.SliceCenter = Rect.new(49, 49, 450, 450)
-    Shadow.Parent = ShadowHolder
-    
-    -- 动态背景效果
-    local BackgroundNoise = Instance.new("ImageLabel")
-    BackgroundNoise.Name = "BackgroundNoise"
-    BackgroundNoise.BackgroundTransparency = 1
-    BackgroundNoise.Size = UDim2.new(1, 0, 1, 0)
-    BackgroundNoise.Image = MaterialAssets.BackgroundNoise
-    BackgroundNoise.ImageTransparency = 0.95
-    BackgroundNoise.ScaleType = Enum.ScaleType.Tile
-    BackgroundNoise.TileSize = UDim2.new(0, 200, 0, 200)
-    BackgroundNoise.ZIndex = 0
-    BackgroundNoise.Parent = MainFrame
-    
+
     -- 标题栏
-    local TitleBar = Instance.new("Frame")
-    TitleBar.Name = "TitleBar"
-    TitleBar.BackgroundColor3 = ColorPalette.Dark.Secondary
-    TitleBar.BackgroundTransparency = 0.3
-    TitleBar.BorderSizePixel = 0
-    TitleBar.Size = UDim2.new(1, 0, 0, 40)
-    TitleBar.ZIndex = 2
-    TitleBar.Parent = MainFrame
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Parent = mainWindow
+    titleBar.BackgroundColor3 = colorScheme.secondary
+    titleBar.BackgroundTransparency = transparency.element
+    titleBar.BorderSizePixel = 0
+    titleBar.Size = UDim2.new(1, 0, 0, 40)
+    titleBar.ZIndex = 3
     
-    local TitleCorner = Instance.new("UICorner")
-    TitleCorner.CornerRadius = UDim.new(0, 12)
-    TitleCorner.Name = "TitleCorner"
-    TitleCorner.Parent = TitleBar
+    local titleCorner = Instance.new("UICorner", titleBar)
+    titleCorner.CornerRadius = UDim.new(0, 12, 0, 0)
+
+    -- 标题文本
+    local titleText = Instance.new("TextLabel")
+    titleText.Name = "Title"
+    titleText.Parent = titleBar
+    titleText.BackgroundTransparency = 1
+    titleText.Position = UDim2.new(0, 15, 0, 0)
+    titleText.Size = UDim2.new(0, 200, 1, 0)
+    titleText.Font = Enum.Font.GothamBold
+    titleText.Text = name or "Dark UI Library"
+    titleText.TextColor3 = colorScheme.text
+    titleText.TextSize = 18
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.ZIndex = 4
+
+    -- 标题渐变效果
+    local titleGradient = Instance.new("UIGradient", titleText)
+    titleGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, colorScheme.accent),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, colorScheme.accent)
+    })
+    titleGradient.Rotation = 0
     
-    local TitleText = Instance.new("TextLabel")
-    TitleText.Name = "TitleText"
-    TitleText.BackgroundTransparency = 1
-    TitleText.Position = UDim2.new(0, 15, 0, 0)
-    TitleText.Size = UDim2.new(0, 200, 1, 0)
-    TitleText.Font = Enum.Font.GothamBold
-    TitleText.Text = name or "DarkUI Library"
-    TitleText.TextColor3 = ColorPalette.Dark.Text
-    TitleText.TextSize = 18
-    TitleText.TextXAlignment = Enum.TextXAlignment.Left
-    TitleText.ZIndex = 3
-    TitleText.Parent = TitleBar
-    
-    -- 标题动画效果
-    local TitleGradient = Instance.new("UIGradient")
-    TitleGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0.00, accentColor),
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1.00, accentColor)
-    }
-    TitleGradient.Offset = Vector2.new(-0.5, 0)
-    TitleGradient.Parent = TitleText
-    
-    local titleTween = services.TweenService:Create(
-        TitleGradient,
+    -- 标题动画
+    local titleTween = tweenService:Create(
+        titleGradient,
         TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
-        {Offset = Vector2.new(1.5, 0)}
+        {Offset = Vector2.new(1, 0)}
     )
     titleTween:Play()
-    
+
     -- 关闭按钮
-    local CloseButton = Instance.new("TextButton")
-    CloseButton.Name = "CloseButton"
-    CloseButton.AnchorPoint = Vector2.new(1, 0.5)
-    CloseButton.BackgroundTransparency = 1
-    CloseButton.Position = UDim2.new(1, -10, 0.5, 0)
-    CloseButton.Size = UDim2.new(0, 24, 0, 24)
-    CloseButton.Font = Enum.Font.GothamBold
-    CloseButton.Text = "×"
-    CloseButton.TextColor3 = ColorPalette.Dark.Text
-    CloseButton.TextSize = 24
-    CloseButton.ZIndex = 3
-    CloseButton.Parent = TitleBar
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Parent = titleBar
+    closeButton.BackgroundColor3 = colorScheme.secondary
+    closeButton.BackgroundTransparency = transparency.element
+    closeButton.BorderSizePixel = 0
+    closeButton.Position = UDim2.new(1, -40, 0.5, -15)
+    closeButton.Size = UDim2.new(0, 30, 0, 30)
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.Text = "X"
+    closeButton.TextColor3 = colorScheme.text
+    closeButton.TextSize = 16
+    closeButton.ZIndex = 4
     
-    -- 按钮悬停效果
-    CloseButton.MouseEnter:Connect(function()
-        AdvancedTween.Tween(CloseButton, {0.2, Enum.EasingStyle.Quad}, {
-            TextColor3 = ColorPalette.Dark.Error,
-            Rotation = 90
+    local closeCorner = Instance.new("UICorner", closeButton)
+    closeCorner.CornerRadius = UDim.new(1, 0)
+    
+    -- 关闭按钮动画
+    closeButton.MouseEnter:Connect(function()
+        Tween(closeButton, {0.2, "Quint", "Out"}, {
+            BackgroundColor3 = Color3.fromRGB(255, 60, 60),
+            TextColor3 = Color3.fromRGB(255, 255, 255)
         })
     end)
     
-    CloseButton.MouseLeave:Connect(function()
-        AdvancedTween.Tween(CloseButton, {0.2, Enum.EasingStyle.Quad}, {
-            TextColor3 = ColorPalette.Dark.Text,
-            Rotation = 0
+    closeButton.MouseLeave:Connect(function()
+        Tween(closeButton, {0.2, "Quint", "Out"}, {
+            BackgroundColor3 = colorScheme.secondary,
+            TextColor3 = colorScheme.text
         })
     end)
     
-    CloseButton.MouseButton1Click:Connect(function()
-        RippleEffect(CloseButton, ColorPalette.Dark.Error)
-        AdvancedTween.ComplexTween(MainFrame, {
-            {time = {0.2, Enum.EasingStyle.Quad}, properties = {Size = UDim2.new(0, 600, 0, 0)}},
-            {time = {0.1, Enum.EasingStyle.Quad}, properties = {Size = UDim2.new(0, 0, 0, 0)}}
-        }, function()
-            DarkUI:Destroy()
-        end)
+    closeButton.MouseButton1Click:Connect(function()
+        library.Destroy()
     end)
+
+    -- 侧边栏
+    local sidebar = Instance.new("Frame")
+    sidebar.Name = "Sidebar"
+    sidebar.Parent = mainWindow
+    sidebar.BackgroundColor3 = colorScheme.secondary
+    sidebar.BackgroundTransparency = transparency.element
+    sidebar.BorderSizePixel = 0
+    sidebar.Position = UDim2.new(0, 0, 0, 40)
+    sidebar.Size = UDim2.new(0, 120, 1, -40)
+    sidebar.ZIndex = 3
     
-    -- 标签栏
-    local TabContainer = Instance.new("Frame")
-    TabContainer.Name = "TabContainer"
-    TabContainer.BackgroundColor3 = ColorPalette.Dark.Secondary
-    TabContainer.BackgroundTransparency = 0.3
-    TabContainer.BorderSizePixel = 0
-    TabContainer.Position = UDim2.new(0, 0, 0, 40)
-    TabContainer.Size = UDim2.new(0, 150, 0, 360)
-    TabContainer.ZIndex = 2
-    TabContainer.Parent = MainFrame
+    local sidebarCorner = Instance.new("UICorner", sidebar)
+    sidebarCorner.CornerRadius = UDim.new(0, 0, 0, 12)
+
+    -- 侧边栏渐变
+    local sidebarGradient = Instance.new("UIGradient", sidebar)
+    sidebarGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 45))
+    })
+    sidebarGradient.Rotation = 90
+
+    -- 标签按钮容器
+    local tabButtons = Instance.new("ScrollingFrame")
+    tabButtons.Name = "TabButtons"
+    tabButtons.Parent = sidebar
+    tabButtons.BackgroundTransparency = 1
+    tabButtons.BorderSizePixel = 0
+    tabButtons.Position = UDim2.new(0, 0, 0, 10)
+    tabButtons.Size = UDim2.new(1, 0, 1, -10)
+    tabButtons.CanvasSize = UDim2.new(0, 0, 0, 0)
+    tabButtons.ScrollBarThickness = 4
+    tabButtons.ScrollBarImageColor3 = colorScheme.accent
+    tabButtons.ZIndex = 4
     
-    local TabCorner = Instance.new("UICorner")
-    TabCorner.CornerRadius = UDim.new(0, 12)
-    TabCorner.Name = "TabCorner"
-    TabCorner.Parent = TabContainer
+    local tabButtonsLayout = Instance.new("UIListLayout", tabButtons)
+    tabButtonsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    tabButtonsLayout.Padding = UDim.new(0, 10)
     
-    local TabList = Instance.new("ScrollingFrame")
-    TabList.Name = "TabList"
-    TabList.Active = true
-    TabList.BackgroundTransparency = 1
-    TabList.BorderSizePixel = 0
-    TabList.Position = UDim2.new(0, 10, 0, 10)
-    TabList.Size = UDim2.new(1, -20, 1, -20)
-    TabList.CanvasSize = UDim2.new(0, 0, 0, 0)
-    TabList.ScrollBarThickness = 4
-    TabList.ScrollBarImageColor3 = accentColor
-    TabList.ZIndex = 3
-    TabList.Parent = TabContainer
-    
-    local TabLayout = Instance.new("UIListLayout")
-    TabLayout.Name = "TabLayout"
-    TabLayout.Padding = UDim.new(0, 8)
-    TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    TabLayout.Parent = TabList
-    
+    tabButtonsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        tabButtons.CanvasSize = UDim2.new(0, 0, 0, tabButtonsLayout.AbsoluteContentSize.Y + 20)
+    end)
+
     -- 内容区域
-    local ContentFrame = Instance.new("Frame")
-    ContentFrame.Name = "ContentFrame"
-    ContentFrame.BackgroundTransparency = 1
-    ContentFrame.BorderSizePixel = 0
-    ContentFrame.Position = UDim2.new(0, 160, 0, 50)
-    ContentFrame.Size = UDim2.new(1, -170, 1, -60)
-    ContentFrame.ZIndex = 2
-    ContentFrame.Parent = MainFrame
+    local contentArea = Instance.new("Frame")
+    contentArea.Name = "ContentArea"
+    contentArea.Parent = mainWindow
+    contentArea.BackgroundTransparency = 1
+    contentArea.BorderSizePixel = 0
+    contentArea.Position = UDim2.new(0, 125, 0, 45)
+    contentArea.Size = UDim2.new(1, -130, 1, -50)
+    contentArea.ZIndex = 3
+
+    -- 最小化/切换按钮
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleButton"
+    toggleButton.Parent = uiContainer
+    toggleButton.BackgroundColor3 = colorScheme.main
+    toggleButton.BackgroundTransparency = transparency.main
+    toggleButton.Position = UDim2.new(0, 10, 0.5, -25)
+    toggleButton.Size = UDim2.new(0, 50, 0, 50)
+    toggleButton.Font = Enum.Font.GothamBold
+    toggleButton.Text = "☰"
+    toggleButton.TextColor3 = colorScheme.text
+    toggleButton.TextSize = 20
+    toggleButton.ZIndex = 5
     
-    -- 标签列表自动调整大小
-    TabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        TabList.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+    local toggleCorner = Instance.new("UICorner", toggleButton)
+    toggleCorner.CornerRadius = UDim.new(1, 0)
+    
+    -- 切换按钮动画
+    toggleButton.MouseEnter:Connect(function()
+        Tween(toggleButton, {0.2, "Quint", "Out"}, {
+            BackgroundTransparency = transparency.hover,
+            TextColor3 = colorScheme.accent
+        })
     end)
     
-    -- 拖拽功能
-    AdvancedDrag(MainFrame, TitleBar)
+    toggleButton.MouseLeave:Connect(function()
+        Tween(toggleButton, {0.2, "Quint", "Out"}, {
+            BackgroundTransparency = transparency.main,
+            TextColor3 = colorScheme.text
+        })
+    end)
     
+    local isVisible = true
+    toggleButton.MouseButton1Click:Connect(function()
+        isVisible = not isVisible
+        if isVisible then
+            Tween(mainWindow, {0.3, "Quint", "Out"}, {
+                Size = UDim2.new(0, 600, 0, 400)
+            })
+        else
+            Tween(mainWindow, {0.3, "Quint", "Out"}, {
+                Size = UDim2.new(0, 600, 0, 0)
+            })
+        end
+    end)
+
+    -- 拖拽功能
+    drag(mainWindow, titleBar)
+
     -- 快捷键控制
-    services.UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    userInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         
         if input.KeyCode == Enum.KeyCode.RightControl then
-            MainFrame.Visible = not MainFrame.Visible
+            library.Toggle()
         end
     end)
-    
-    -- 窗口动画
-    AdvancedTween.ComplexTween(MainFrame, {
-        {time = {0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out}, properties = {Size = UDim2.new(0, 0, 0, 0)}},
-        {time = {0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out}, properties = {Size = UDim2.new(0, 600, 0, 400)}}
-    })
-    
-    -- 窗口功能
+
+    -- 窗口模块
     local window = {}
     
-    function window:ToggleVisibility()
-        MainFrame.Visible = not MainFrame.Visible
-    end
-    
-    function window:Destroy()
-        DarkUI:Destroy()
-    end
-    
-    function window:SetAccentColor(color)
-        accentColor = color
-        TitleGradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0.00, accentColor),
-            ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(1.00, accentColor)
-        }
-        TabList.ScrollBarImageColor3 = accentColor
-    end
-    
-    -- 标签创建函数
-    function window:CreateTab(name, icon)
-        local TabButton = Instance.new("TextButton")
-        TabButton.Name = "TabButton_" .. name
-        TabButton.BackgroundColor3 = ColorPalette.Dark.Tertiary
-        TabButton.BackgroundTransparency = 0.5
-        TabButton.BorderSizePixel = 0
-        TabButton.Size = UDim2.new(1, 0, 0, 40)
-        TabButton.AutoButtonColor = false
-        TabButton.Font = Enum.Font.GothamSemibold
-        TabButton.Text = "   " .. name
-        TabButton.TextColor3 = ColorPalette.Dark.Text
-        TabButton.TextSize = 14
-        TabButton.TextXAlignment = Enum.TextXAlignment.Left
-        TabButton.ZIndex = 4
-        TabButton.Parent = TabList
+    function window.Tab(window, name, icon)
+        -- 创建标签内容
+        local tabContent = Instance.new("ScrollingFrame")
+        tabContent.Name = "TabContent"
+        tabContent.Parent = contentArea
+        tabContent.BackgroundTransparency = 1
+        tabContent.BorderSizePixel = 0
+        tabContent.Size = UDim2.new(1, 0, 1, 0)
+        tabContent.ScrollBarThickness = 4
+        tabContent.ScrollBarImageColor3 = colorScheme.accent
+        tabContent.Visible = false
+        tabContent.ZIndex = 4
         
-        local TabCorner = Instance.new("UICorner")
-        TabCorner.CornerRadius = UDim.new(0, 8)
-        TabCorner.Parent = TabButton
+        local tabContentLayout = Instance.new("UIListLayout", tabContent)
+        tabContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        tabContentLayout.Padding = UDim.new(0, 10)
         
-        local TabIcon = Instance.new("ImageLabel")
-        TabIcon.Name = "TabIcon"
-        TabIcon.BackgroundTransparency = 1
-        TabIcon.Position = UDim2.new(0, 10, 0.5, -12)
-        TabIcon.Size = UDim2.new(0, 24, 0, 24)
-        TabIcon.Image = icon or "rbxassetid://4370341699"
-        TabIcon.ImageColor3 = accentColor
-        TabIcon.ZIndex = 5
-        TabIcon.Parent = TabButton
-        
-        local TabContent = Instance.new("ScrollingFrame")
-        TabContent.Name = "TabContent_" .. name
-        TabContent.Active = true
-        TabContent.BackgroundTransparency = 1
-        TabContent.BorderSizePixel = 0
-        TabContent.Size = UDim2.new(1, 0, 1, 0)
-        TabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
-        TabContent.ScrollBarThickness = 4
-        TabContent.ScrollBarImageColor3 = accentColor
-        TabContent.Visible = false
-        TabContent.ZIndex = 3
-        TabContent.Parent = ContentFrame
-        
-        local ContentLayout = Instance.new("UIListLayout")
-        ContentLayout.Name = "ContentLayout"
-        ContentLayout.Padding = UDim.new(0, 10)
-        ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        ContentLayout.Parent = TabContent
-        
-        -- 内容区域自动调整大小
-        ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            TabContent.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 20)
+        tabContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            tabContent.CanvasSize = UDim2.new(0, 0, 0, tabContentLayout.AbsoluteContentSize.Y + 20)
         end)
+
+        -- 创建标签按钮
+        local tabButton = Instance.new("TextButton")
+        tabButton.Name = "TabButton_"..name
+        tabButton.Parent = tabButtons
+        tabButton.BackgroundColor3 = colorScheme.secondary
+        tabButton.BackgroundTransparency = transparency.element
+        tabButton.BorderSizePixel = 0
+        tabButton.Size = UDim2.new(1, -20, 0, 40)
+        tabButton.AutoButtonColor = false
+        tabButton.Font = Enum.Font.GothamSemibold
+        tabButton.Text = ""
+        tabButton.TextColor3 = colorScheme.text
+        tabButton.TextSize = 14
+        tabButton.ZIndex = 5
         
-        -- 按钮悬停效果
-        TabButton.MouseEnter:Connect(function()
-            AdvancedTween.Tween(TabButton, {0.2, Enum.EasingStyle.Quad}, {
-                BackgroundTransparency = 0.3,
-                TextColor3 = accentColor
-            })
-            AdvancedTween.Tween(TabIcon, {0.2, Enum.EasingStyle.Quad}, {
-                ImageColor3 = ColorPalette.Dark.Text
+        local tabButtonCorner = Instance.new("UICorner", tabButton)
+        tabButtonCorner.CornerRadius = UDim.new(0, 8)
+        
+        -- 标签图标
+        local tabIcon = Instance.new("ImageLabel")
+        tabIcon.Name = "Icon"
+        tabIcon.Parent = tabButton
+        tabIcon.BackgroundTransparency = 1
+        tabIcon.Position = UDim2.new(0, 10, 0.5, -12)
+        tabIcon.Size = UDim2.new(0, 24, 0, 24)
+        tabIcon.Image = icon or "rbxassetid://4370341699"
+        tabIcon.ImageTransparency = 0.5
+        tabIcon.ZIndex = 6
+        
+        -- 标签文本
+        local tabText = Instance.new("TextLabel")
+        tabText.Name = "Text"
+        tabText.Parent = tabButton
+        tabText.BackgroundTransparency = 1
+        tabText.Position = UDim2.new(0, 40, 0, 0)
+        tabText.Size = UDim2.new(1, -40, 1, 0)
+        tabText.Font = Enum.Font.GothamSemibold
+        tabText.Text = name
+        tabText.TextColor3 = colorScheme.text
+        tabText.TextTransparency = 0.5
+        tabText.TextSize = 14
+        tabText.TextXAlignment = Enum.TextXAlignment.Left
+        tabText.ZIndex = 6
+        
+        -- 标签按钮动画
+        tabButton.MouseEnter:Connect(function()
+            Tween(tabIcon, {0.2, "Quint", "Out"}, {ImageTransparency = 0.2})
+            Tween(tabText, {0.2, "Quint", "Out"}, {TextTransparency = 0.2})
+            Tween(tabButton, {0.2, "Quint", "Out"}, {
+                BackgroundTransparency = transparency.hover,
+                BackgroundColor3 = colorScheme.highlight
             })
         end)
         
-        TabButton.MouseLeave:Connect(function()
-            AdvancedTween.Tween(TabButton, {0.2, Enum.EasingStyle.Quad}, {
-                BackgroundTransparency = 0.5,
-                TextColor3 = ColorPalette.Dark.Text
-            })
-            AdvancedTween.Tween(TabIcon, {0.2, Enum.EasingStyle.Quad}, {
-                ImageColor3 = accentColor
+        tabButton.MouseLeave:Connect(function()
+            if library.currentTab and library.currentTab[1] == tabButton then return end
+            Tween(tabIcon, {0.2, "Quint", "Out"}, {ImageTransparency = 0.5})
+            Tween(tabText, {0.2, "Quint", "Out"}, {TextTransparency = 0.5})
+            Tween(tabButton, {0.2, "Quint", "Out"}, {
+                BackgroundTransparency = transparency.element,
+                BackgroundColor3 = colorScheme.secondary
             })
         end)
         
-        -- 按钮点击效果
-        TabButton.MouseButton1Click:Connect(function()
-            RippleEffect(TabButton, accentColor)
-            SwitchTab({TabButton, TabContent})
+        tabButton.MouseButton1Click:Connect(function()
+            Ripple(tabButton, colorScheme.accent)
+            switchTab({tabButton, tabContent})
         end)
-        
-        -- 如果是第一个标签，自动选择
+
+        -- 如果是第一个标签，自动选中
         if library.currentTab == nil then
-            SwitchTab({TabButton, TabContent})
+            switchTab({tabButton, tabContent})
         end
-        
-        -- 标签功能
+
+        -- 标签模块
         local tab = {}
         
-        function tab:CreateSection(title, initiallyExpanded)
-            initiallyExpanded = initiallyExpanded == nil and true or initiallyExpanded
+        function tab.Section(tab, name, isOpen)
+            local sectionContainer = Instance.new("Frame")
+            sectionContainer.Name = "Section"
+            sectionContainer.Parent = tabContent
+            sectionContainer.BackgroundColor3 = colorScheme.secondary
+            sectionContainer.BackgroundTransparency = transparency.element
+            sectionContainer.BorderSizePixel = 0
+            sectionContainer.Size = UDim2.new(1, 0, 0, 40)
+            sectionContainer.ClipsDescendants = true
+            sectionContainer.ZIndex = 5
             
-            local SectionFrame = Instance.new("Frame")
-            SectionFrame.Name = "Section_" .. title
-            SectionFrame.BackgroundColor3 = ColorPalette.Dark.Tertiary
-            SectionFrame.BackgroundTransparency = 0.4
-            SectionFrame.BorderSizePixel = 0
-            SectionFrame.Size = UDim2.new(1, 0, 0, initiallyExpanded and 100 or 40)
-            SectionFrame.ZIndex = 4
-            SectionFrame.Parent = TabContent
+            local sectionCorner = Instance.new("UICorner", sectionContainer)
+            sectionCorner.CornerRadius = UDim.new(0, 8)
             
-            local SectionCorner = Instance.new("UICorner")
-            SectionCorner.CornerRadius = UDim.new(0, 8)
-            SectionCorner.Parent = SectionFrame
+            -- 标题栏
+            local sectionHeader = Instance.new("Frame")
+            sectionHeader.Name = "Header"
+            sectionHeader.Parent = sectionContainer
+            sectionHeader.BackgroundTransparency = 1
+            sectionHeader.BorderSizePixel = 0
+            sectionHeader.Size = UDim2.new(1, 0, 0, 40)
+            sectionHeader.ZIndex = 6
             
-            local SectionTitle = Instance.new("TextButton")
-            SectionTitle.Name = "SectionTitle"
-            SectionTitle.BackgroundTransparency = 1
-            SectionTitle.Size = UDim2.new(1, 0, 0, 40)
-            SectionTitle.Font = Enum.Font.GothamBold
-            SectionTitle.Text = "   " .. title
-            SectionTitle.TextColor3 = ColorPalette.Dark.Text
-            SectionTitle.TextSize = 16
-            SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-            SectionTitle.ZIndex = 5
-            SectionTitle.Parent = SectionFrame
+            -- 标题文本
+            local sectionText = Instance.new("TextLabel")
+            sectionText.Name = "Text"
+            sectionText.Parent = sectionHeader
+            sectionText.BackgroundTransparency = 1
+            sectionText.Position = UDim2.new(0, 15, 0, 0)
+            sectionText.Size = UDim2.new(1, -50, 1, 0)
+            sectionText.Font = Enum.Font.GothamSemibold
+            sectionText.Text = name
+            sectionText.TextColor3 = colorScheme.text
+            sectionText.TextSize = 16
+            sectionText.TextXAlignment = Enum.TextXAlignment.Left
+            sectionText.ZIndex = 7
             
-            local ExpandIcon = Instance.new("ImageLabel")
-            ExpandIcon.Name = "ExpandIcon"
-            ExpandIcon.AnchorPoint = Vector2.new(1, 0.5)
-            ExpandIcon.BackgroundTransparency = 1
-            ExpandIcon.Position = UDim2.new(1, -10, 0.5, 0)
-            ExpandIcon.Size = UDim2.new(0, 20, 0, 20)
-            ExpandIcon.Image = initiallyExpanded and MaterialAssets.ArrowUp or MaterialAssets.ArrowDown
-            ExpandIcon.ImageColor3 = accentColor
-            ExpandIcon.ZIndex = 5
-            ExpandIcon.Parent = SectionTitle
+            -- 切换按钮
+            local toggleButton = Instance.new("ImageButton")
+            toggleButton.Name = "Toggle"
+            toggleButton.Parent = sectionHeader
+            toggleButton.BackgroundTransparency = 1
+            toggleButton.Position = UDim2.new(1, -35, 0.5, -12)
+            toggleButton.Size = UDim2.new(0, 24, 0, 24)
+            toggleButton.Image = "rbxassetid://6031302934" -- 向下箭头
+            toggleButton.ImageColor3 = colorScheme.accent
+            toggleButton.ZIndex = 7
             
-            local ContentContainer = Instance.new("Frame")
-            ContentContainer.Name = "ContentContainer"
-            ContentContainer.BackgroundTransparency = 1
-            ContentContainer.Position = UDim2.new(0, 10, 0, 45)
-            ContentContainer.Size = UDim2.new(1, -20, 1, -50)
-            ContentContainer.Visible = initiallyExpanded
-            ContentContainer.ZIndex = 4
-            ContentContainer.Parent = SectionFrame
+            -- 内容区域
+            local contentFrame = Instance.new("Frame")
+            contentFrame.Name = "Content"
+            contentFrame.Parent = sectionContainer
+            contentFrame.BackgroundTransparency = 1
+            contentFrame.BorderSizePixel = 0
+            contentFrame.Position = UDim2.new(0, 10, 0, 45)
+            contentFrame.Size = UDim2.new(1, -20, 0, 0)
+            contentFrame.ZIndex = 6
             
-            local ContentLayout = Instance.new("UIListLayout")
-            ContentLayout.Name = "ContentLayout"
-            ContentLayout.Padding = UDim.new(0, 8)
-            ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            ContentLayout.Parent = ContentContainer
+            local contentLayout = Instance.new("UIListLayout", contentFrame)
+            contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            contentLayout.Padding = UDim.new(0, 10)
             
-            -- 内容区域自动调整大小
-            ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                if ContentContainer.Visible then
-                    SectionFrame.Size = UDim2.new(1, 0, 0, 45 + ContentLayout.AbsoluteContentSize.Y + 10)
+            contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                if not sectionContainer:FindFirstChild("Header") then return end
+                contentFrame.Size = UDim2.new(1, -20, 0, contentLayout.AbsoluteContentSize.Y)
+                sectionContainer.Size = UDim2.new(1, 0, 0, contentFrame.Size.Y.Offset + 50)
+            end)
+            
+            -- 初始状态
+            local isOpen = isOpen == nil and true or isOpen
+            
+            local function toggleState()
+                isOpen = not isOpen
+                
+                if isOpen then
+                    Tween(toggleButton, {0.2, "Quint", "Out"}, {Rotation = 0})
+                    Tween(sectionContainer, {0.2, "Quint", "Out"}, {
+                        Size = UDim2.new(1, 0, 0, contentFrame.Size.Y.Offset + 50)
+                    })
+                else
+                    Tween(toggleButton, {0.2, "Quint", "Out"}, {Rotation = 180})
+                    Tween(sectionContainer, {0.2, "Quint", "Out"}, {
+                        Size = UDim2.new(1, 0, 0, 40)
+                    })
                 end
-            end)
+            end
             
-            -- 展开/折叠功能
-            local isExpanded = initiallyExpanded
+            toggleButton.MouseButton1Click:Connect(toggleState)
             
-            SectionTitle.MouseButton1Click:Connect(function()
-                isExpanded = not isExpanded
-                
-                AdvancedTween.Tween(ExpandIcon, {0.2, Enum.EasingStyle.Quad}, {
-                    Rotation = isExpanded and 180 or 0,
-                    ImageColor3 = isExpanded and ColorPalette.Dark.Text or accentColor
-                })
-                
-                AdvancedTween.Tween(SectionTitle, {0.2, Enum.EasingStyle.Quad}, {
-                    TextColor3 = isExpanded and accentColor or ColorPalette.Dark.Text
-                })
-                
-                ContentContainer.Visible = isExpanded
-                SectionFrame.Size = UDim2.new(1, 0, 0, isExpanded and (45 + ContentLayout.AbsoluteContentSize.Y + 10) or 40)
-            end)
+            -- 如果初始关闭，调整状态
+            if not isOpen then
+                toggleButton.Rotation = 180
+                sectionContainer.Size = UDim2.new(1, 0, 0, 40)
+            end
             
-            -- 悬停效果
-            SectionTitle.MouseEnter:Connect(function()
-                AdvancedTween.Tween(SectionTitle, {0.2, Enum.EasingStyle.Quad}, {
-                    TextColor3 = accentColor
-                })
-                AdvancedTween.Tween(ExpandIcon, {0.2, Enum.EasingStyle.Quad}, {
-                    ImageColor3 = ColorPalette.Dark.Text
-                })
-            end)
-            
-            SectionTitle.MouseLeave:Connect(function()
-                AdvancedTween.Tween(SectionTitle, {0.2, Enum.EasingStyle.Quad}, {
-                    TextColor3 = isExpanded and accentColor or ColorPalette.Dark.Text
-                })
-                AdvancedTween.Tween(ExpandIcon, {0.2, Enum.EasingStyle.Quad}, {
-                    ImageColor3 = isExpanded and ColorPalette.Dark.Text or accentColor
-                })
-            end)
-            
-            -- 区域功能
+            -- 节模块
             local section = {}
             
-            function section:CreateButton(text, callback)
-                local Button = Instance.new("TextButton")
-                Button.Name = "Button_" .. text
-                Button.BackgroundColor3 = ColorPalette.Dark.Tertiary
-                Button.BackgroundTransparency = 0.5
-                Button.BorderSizePixel = 0
-                Button.Size = UDim2.new(1, 0, 0, 36)
-                Button.AutoButtonColor = false
-                Button.Font = Enum.Font.GothamSemibold
-                Button.Text = "   " .. text
-                Button.TextColor3 = ColorPalette.Dark.Text
-                Button.TextSize = 14
-                Button.TextXAlignment = Enum.TextXAlignment.Left
-                Button.ZIndex = 5
-                Button.Parent = ContentContainer
+            -- 按钮元素
+            function section.Button(section, text, callback)
+                local callback = callback or function() end
                 
-                local ButtonCorner = Instance.new("UICorner")
-                ButtonCorner.CornerRadius = UDim.new(0, 6)
-                ButtonCorner.Parent = Button
+                local button = Instance.new("TextButton")
+                button.Name = "Button"
+                button.Parent = contentFrame
+                button.BackgroundColor3 = colorScheme.secondary
+                button.BackgroundTransparency = transparency.element
+                button.BorderSizePixel = 0
+                button.Size = UDim2.new(1, 0, 0, 40)
+                button.AutoButtonColor = false
+                button.Font = Enum.Font.GothamSemibold
+                button.Text = "   "..text
+                button.TextColor3 = colorScheme.text
+                button.TextSize = 16
+                button.TextXAlignment = Enum.TextXAlignment.Left
+                button.ZIndex = 7
                 
-                -- 悬停效果
-                Button.MouseEnter:Connect(function()
-                    AdvancedTween.Tween(Button, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.3,
-                        TextColor3 = accentColor
+                local buttonCorner = Instance.new("UICorner", button)
+                buttonCorner.CornerRadius = UDim.new(0, 6)
+                
+                -- 按钮动画
+                button.MouseEnter:Connect(function()
+                    Tween(button, {0.2, "Quint", "Out"}, {
+                        BackgroundTransparency = transparency.hover,
+                        TextColor3 = colorScheme.accent
                     })
                 end)
                 
-                Button.MouseLeave:Connect(function()
-                    AdvancedTween.Tween(Button, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.5,
-                        TextColor3 = ColorPalette.Dark.Text
+                button.MouseLeave:Connect(function()
+                    Tween(button, {0.2, "Quint", "Out"}, {
+                        BackgroundTransparency = transparency.element,
+                        TextColor3 = colorScheme.text
                     })
                 end)
                 
-                -- 点击效果
-                Button.MouseButton1Click:Connect(function()
-                    RippleEffect(Button, accentColor)
-                    AdvancedTween.ComplexTween(Button, {
-                        {time = {0.1, Enum.EasingStyle.Quad}, properties = {Size = UDim2.new(1, -5, 0, 36)}},
-                        {time = {0.1, Enum.EasingStyle.Quad}, properties = {Size = UDim2.new(1, 0, 0, 36)}}
-                    })
-                    
-                    if callback then
-                        callback()
-                    end
+                button.MouseButton1Click:Connect(function()
+                    Ripple(button, colorScheme.accent)
+                    spawn(callback)
                 end)
                 
-                return Button
+                return button
             end
             
-            function section:CreateToggle(text, defaultValue, callback)
-                defaultValue = defaultValue or false
+            -- 标签元素
+            function section.Label(section, text)
+                local label = Instance.new("TextLabel")
+                label.Name = "Label"
+                label.Parent = contentFrame
+                label.BackgroundColor3 = colorScheme.secondary
+                label.BackgroundTransparency = transparency.element
+                label.BorderSizePixel = 0
+                label.Size = UDim2.new(1, 0, 0, 30)
+                label.Font = Enum.Font.GothamSemibold
+                label.Text = text
+                label.TextColor3 = colorScheme.text
+                label.TextSize = 14
+                label.ZIndex = 7
                 
-                local ToggleFrame = Instance.new("Frame")
-                ToggleFrame.Name = "Toggle_" .. text
-                ToggleFrame.BackgroundColor3 = ColorPalette.Dark.Tertiary
-                ToggleFrame.BackgroundTransparency = 0.5
-                ToggleFrame.BorderSizePixel = 0
-                ToggleFrame.Size = UDim2.new(1, 0, 0, 36)
-                ToggleFrame.ZIndex = 5
-                ToggleFrame.Parent = ContentContainer
+                local labelCorner = Instance.new("UICorner", label)
+                labelCorner.CornerRadius = UDim.new(0, 6)
                 
-                local ToggleCorner = Instance.new("UICorner")
-                ToggleCorner.CornerRadius = UDim.new(0, 6)
-                ToggleCorner.Parent = ToggleFrame
-                
-                local ToggleLabel = Instance.new("TextLabel")
-                ToggleLabel.Name = "ToggleLabel"
-                ToggleLabel.BackgroundTransparency = 1
-                ToggleLabel.Position = UDim2.new(0, 10, 0, 0)
-                ToggleLabel.Size = UDim2.new(0.7, -10, 1, 0)
-                ToggleLabel.Font = Enum.Font.GothamSemibold
-                ToggleLabel.Text = text
-                ToggleLabel.TextColor3 = ColorPalette.Dark.Text
-                ToggleLabel.TextSize = 14
-                ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-                ToggleLabel.ZIndex = 6
-                ToggleLabel.Parent = ToggleFrame
-                
-                local ToggleButton = Instance.new("ImageButton")
-                ToggleButton.Name = "ToggleButton"
-                ToggleButton.AnchorPoint = Vector2.new(1, 0.5)
-                ToggleButton.BackgroundTransparency = 1
-                ToggleButton.Position = UDim2.new(1, -10, 0.5, 0)
-                ToggleButton.Size = UDim2.new(0, 40, 0, 20)
-                ToggleButton.Image = defaultValue and MaterialAssets.ToggleOn or MaterialAssets.ToggleOff
-                ToggleButton.ImageColor3 = defaultValue and accentColor or ColorPalette.Dark.Tertiary
-                ToggleButton.ZIndex = 6
-                ToggleButton.Parent = ToggleFrame
-                
-                -- 悬停效果
-                ToggleFrame.MouseEnter:Connect(function()
-                    AdvancedTween.Tween(ToggleFrame, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.3
-                    })
-                    AdvancedTween.Tween(ToggleLabel, {0.2, Enum.EasingStyle.Quad}, {
-                        TextColor3 = accentColor
-                    })
-                end)
-                
-                ToggleFrame.MouseLeave:Connect(function()
-                    AdvancedTween.Tween(ToggleFrame, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.5
-                    })
-                    AdvancedTween.Tween(ToggleLabel, {0.2, Enum.EasingStyle.Quad}, {
-                        TextColor3 = ColorPalette.Dark.Text
-                    })
-                end)
-                
-                -- 切换功能
-                local isToggled = defaultValue
-                
-                ToggleButton.MouseButton1Click:Connect(function()
-                    isToggled = not isToggled
-                    
-                    AdvancedTween.Tween(ToggleButton, {0.2, Enum.EasingStyle.Quad}, {
-                        ImageColor3 = isToggled and accentColor or ColorPalette.Dark.Tertiary,
-                        Image = isToggled and MaterialAssets.ToggleOn or MaterialAssets.ToggleOff
-                    })
-                    
-                    if callback then
-                        callback(isToggled)
-                    end
-                end)
-                
-                ToggleFrame.MouseButton1Click:Connect(function()
-                    isToggled = not isToggled
-                    
-                    AdvancedTween.Tween(ToggleButton, {0.2, Enum.EasingStyle.Quad}, {
-                        ImageColor3 = isToggled and accentColor or ColorPalette.Dark.Tertiary,
-                        Image = isToggled and MaterialAssets.ToggleOn or MaterialAssets.ToggleOff
-                    })
-                    
-                    if callback then
-                        callback(isToggled)
-                    end
-                end)
-                
-                -- 返回控制函数
-                local toggle = {}
-                
-                function toggle:SetValue(value)
-                    if isToggled ~= value then
-                        isToggled = value
-                        
-                        AdvancedTween.Tween(ToggleButton, {0.2, Enum.EasingStyle.Quad}, {
-                            ImageColor3 = isToggled and accentColor or ColorPalette.Dark.Tertiary,
-                            Image = isToggled and MaterialAssets.ToggleOn or MaterialAssets.ToggleOff
-                        })
-                        
-                        if callback then
-                            callback(isToggled)
-                        end
-                    end
-                end
-                
-                function toggle:GetValue()
-                    return isToggled
-                end
-                
-                return toggle
+                return label
             end
             
-            function section:CreateSlider(text, minValue, maxValue, defaultValue, callback)
-                minValue = minValue or 0
-                maxValue = maxValue or 100
-                defaultValue = defaultValue or minValue
+            -- 切换开关元素
+            function section.Toggle(section, text, flag, default, callback)
+                local callback = callback or function() end
+                local default = default or false
+                assert(text, "No text provided")
+                assert(flag, "No flag provided")
                 
-                local SliderFrame = Instance.new("Frame")
-                SliderFrame.Name = "Slider_" .. text
-                SliderFrame.BackgroundColor3 = ColorPalette.Dark.Tertiary
-                SliderFrame.BackgroundTransparency = 0.5
-                SliderFrame.BorderSizePixel = 0
-                SliderFrame.Size = UDim2.new(1, 0, 0, 60)
-                SliderFrame.ZIndex = 5
-                SliderFrame.Parent = ContentContainer
+                library.flags[flag] = default
                 
-                local SliderCorner = Instance.new("UICorner")
-                SliderCorner.CornerRadius = UDim.new(0, 6)
-                SliderCorner.Parent = SliderFrame
+                local toggle = Instance.new("TextButton")
+                toggle.Name = "Toggle"
+                toggle.Parent = contentFrame
+                toggle.BackgroundColor3 = colorScheme.secondary
+                toggle.BackgroundTransparency = transparency.element
+                toggle.BorderSizePixel = 0
+                toggle.Size = UDim2.new(1, 0, 0, 40)
+                toggle.AutoButtonColor = false
+                toggle.Font = Enum.Font.GothamSemibold
+                toggle.Text = "   "..text
+                toggle.TextColor3 = colorScheme.text
+                toggle.TextSize = 16
+                toggle.TextXAlignment = Enum.TextXAlignment.Left
+                toggle.ZIndex = 7
                 
-                local SliderLabel = Instance.new("TextLabel")
-                SliderLabel.Name = "SliderLabel"
-                SliderLabel.BackgroundTransparency = 1
-                SliderLabel.Position = UDim2.new(0, 10, 0, 5)
-                SliderLabel.Size = UDim2.new(1, -20, 0, 20)
-                SliderLabel.Font = Enum.Font.GothamSemibold
-                SliderLabel.Text = text
-                SliderLabel.TextColor3 = ColorPalette.Dark.Text
-                SliderLabel.TextSize = 14
-                SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-                SliderLabel.ZIndex = 6
-                SliderLabel.Parent = SliderFrame
+                local toggleCorner = Instance.new("UICorner", toggle)
+                toggleCorner.CornerRadius = UDim.new(0, 6)
                 
-                local SliderValue = Instance.new("TextLabel")
-                SliderValue.Name = "SliderValue"
-                SliderValue.BackgroundTransparency = 1
-                SliderValue.AnchorPoint = Vector2.new(1, 0)
-                SliderValue.Position = UDim2.new(1, -10, 0, 5)
-                SliderValue.Size = UDim2.new(0.3, 0, 0, 20)
-                SliderValue.Font = Enum.Font.Gotham
-                SliderValue.Text = tostring(defaultValue)
-                SliderValue.TextColor3 = accentColor
-                SliderValue.TextSize = 14
-                SliderValue.TextXAlignment = Enum.TextXAlignment.Right
-                SliderValue.ZIndex = 6
-                SliderValue.Parent = SliderFrame
+                -- 开关背景
+                local toggleBackground = Instance.new("Frame")
+                toggleBackground.Name = "Background"
+                toggleBackground.Parent = toggle
+                toggleBackground.BackgroundColor3 = colorScheme.main
+                toggleBackground.BackgroundTransparency = transparency.element
+                toggleBackground.BorderSizePixel = 0
+                toggleBackground.Position = UDim2.new(1, -60, 0.5, -12)
+                toggleBackground.Size = UDim2.new(0, 50, 0, 24)
+                toggleBackground.ZIndex = 8
                 
-                local SliderTrack = Instance.new("Frame")
-                SliderTrack.Name = "SliderTrack"
-                SliderTrack.BackgroundColor3 = ColorPalette.Dark.Secondary
-                SliderTrack.BackgroundTransparency = 0.5
-                SliderTrack.BorderSizePixel = 0
-                SliderTrack.Position = UDim2.new(0, 10, 0, 30)
-                SliderTrack.Size = UDim2.new(1, -20, 0, 6)
-                SliderTrack.ZIndex = 6
-                SliderTrack.Parent = SliderFrame
+                local toggleBgCorner = Instance.new("UICorner", toggleBackground)
+                toggleBgCorner.CornerRadius = UDim.new(1, 0)
                 
-                local SliderTrackCorner = Instance.new("UICorner")
-                SliderTrackCorner.CornerRadius = UDim.new(1, 0)
-                SliderTrackCorner.Parent = SliderTrack
+                -- 开关滑块
+                local toggleSlider = Instance.new("Frame")
+                toggleSlider.Name = "Slider"
+                toggleSlider.Parent = toggleBackground
+                toggleSlider.BackgroundColor3 = default and colorScheme.accent or colorScheme.text
+                toggleSlider.BorderSizePixel = 0
+                toggleSlider.Position = default and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
+                toggleSlider.Size = UDim2.new(0, 20, 0, 20)
+                toggleSlider.ZIndex = 9
                 
-                local SliderFill = Instance.new("Frame")
-                SliderFill.Name = "SliderFill"
-                SliderFill.BackgroundColor3 = accentColor
-                SliderFill.BorderSizePixel = 0
-                SliderFill.Size = UDim2.new((defaultValue - minValue) / (maxValue - minValue), 0, 1, 0)
-                SliderFill.ZIndex = 7
-                SliderFill.Parent = SliderTrack
+                local toggleSliderCorner = Instance.new("UICorner", toggleSlider)
+                toggleSliderCorner.CornerRadius = UDim.new(1, 0)
                 
-                local SliderFillCorner = Instance.new("UICorner")
-                SliderFillCorner.CornerRadius = UDim.new(1, 0)
-                SliderFillCorner.Parent = SliderFill
-                
-                local SliderHandle = Instance.new("ImageButton")
-                SliderHandle.Name = "SliderHandle"
-                SliderHandle.AnchorPoint = Vector2.new(0.5, 0.5)
-                SliderHandle.BackgroundTransparency = 1
-                SliderHandle.Position = UDim2.new(SliderFill.Size.X.Scale, SliderFill.Size.X.Offset, 0.5, 0)
-                SliderHandle.Size = UDim2.new(0, 16, 0, 16)
-                SliderHandle.Image = MaterialAssets.SliderHandle
-                SliderHandle.ImageColor3 = accentColor
-                SliderHandle.ZIndex = 8
-                SliderHandle.Parent = SliderTrack
-                
-                -- 悬停效果
-                SliderFrame.MouseEnter:Connect(function()
-                    AdvancedTween.Tween(SliderFrame, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.3
-                    })
-                    AdvancedTween.Tween(SliderLabel, {0.2, Enum.EasingStyle.Quad}, {
-                        TextColor3 = accentColor
-                    })
-                end)
-                
-                SliderFrame.MouseLeave:Connect(function()
-                    AdvancedTween.Tween(SliderFrame, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.5
-                    })
-                    AdvancedTween.Tween(SliderLabel, {0.2, Enum.EasingStyle.Quad}, {
-                        TextColor3 = ColorPalette.Dark.Text
-                    })
-                end)
-                
-                -- 滑块功能
-                local isDragging = false
-                local currentValue = defaultValue
-                
-                local function SetValue(value)
-                    value = math.clamp(value, minValue, maxValue)
-                    currentValue = value
+                -- 切换函数
+                local function setState(state)
+                    if state == nil then state = not library.flags[flag] end
+                    if library.flags[flag] == state then return end
                     
-                    local percent = (value - minValue) / (maxValue - minValue)
-                    AdvancedTween.Tween(SliderFill, {0.1, Enum.EasingStyle.Quad}, {
-                        Size = UDim2.new(percent, 0, 1, 0)
+                    library.flags[flag] = state
+                    
+                    Tween(toggleSlider, {0.2, "Quint", "Out"}, {
+                        Position = state and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10),
+                        BackgroundColor3 = state and colorScheme.accent or colorScheme.text
                     })
                     
-                    AdvancedTween.Tween(SliderHandle, {0.1, Enum.EasingStyle.Quad}, {
-                        Position = UDim2.new(percent, 0, 0.5, 0)
-                    })
-                    
-                    SliderValue.Text = tostring(math.floor(value))
-                    
-                    if callback then
-                        callback(value)
-                    end
+                    callback(state)
                 end
                 
-                SliderHandle.MouseButton1Down:Connect(function()
-                    isDragging = true
+                -- 按钮动画
+                toggle.MouseEnter:Connect(function()
+                    Tween(toggle, {0.2, "Quint", "Out"}, {
+                        BackgroundTransparency = transparency.hover,
+                        TextColor3 = colorScheme.accent
+                    })
                 end)
                 
-                services.UserInputService.InputEnded:Connect(function(input)
+                toggle.MouseLeave:Connect(function()
+                    Tween(toggle, {0.2, "Quint", "Out"}, {
+                        BackgroundTransparency = transparency.element,
+                        TextColor3 = colorScheme.text
+                    })
+                end)
+                
+                toggle.MouseButton1Click:Connect(function()
+                    Ripple(toggle, colorScheme.accent)
+                    setState()
+                end)
+                
+                return {
+                    SetState = setState
+                }
+            end
+            
+            -- 滑块元素
+            function section.Slider(section, text, flag, min, max, default, callback)
+                local callback = callback or function() end
+                local min = min or 0
+                local max = max or 100
+                local default = default or min
+                assert(text, "No text provided")
+                assert(flag, "No flag provided")
+                
+                library.flags[flag] = default
+                
+                local slider = Instance.new("Frame")
+                slider.Name = "Slider"
+                slider.Parent = contentFrame
+                slider.BackgroundColor3 = colorScheme.secondary
+                slider.BackgroundTransparency = transparency.element
+                slider.BorderSizePixel = 0
+                slider.Size = UDim2.new(1, 0, 0, 60)
+                slider.ZIndex = 7
+                
+                local sliderCorner = Instance.new("UICorner", slider)
+                sliderCorner.CornerRadius = UDim.new(0, 6)
+                
+                -- 标题
+                local title = Instance.new("TextLabel")
+                title.Name = "Title"
+                title.Parent = slider
+                title.BackgroundTransparency = 1
+                title.Position = UDim2.new(0, 15, 0, 5)
+                title.Size = UDim2.new(1, -30, 0, 20)
+                title.Font = Enum.Font.GothamSemibold
+                title.Text = text
+                title.TextColor3 = colorScheme.text
+                title.TextSize = 16
+                title.TextXAlignment = Enum.TextXAlignment.Left
+                title.ZIndex = 8
+                
+                -- 滑块背景
+                local track = Instance.new("Frame")
+                track.Name = "Track"
+                track.Parent = slider
+                track.BackgroundColor3 = colorScheme.main
+                track.BackgroundTransparency = transparency.element
+                track.BorderSizePixel = 0
+                track.Position = UDim2.new(0, 15, 0, 35)
+                track.Size = UDim2.new(1, -30, 0, 6)
+                track.ZIndex = 8
+                
+                local trackCorner = Instance.new("UICorner", track)
+                trackCorner.CornerRadius = UDim.new(1, 0)
+                
+                -- 滑块填充
+                local fill = Instance.new("Frame")
+                fill.Name = "Fill"
+                fill.Parent = track
+                fill.BackgroundColor3 = colorScheme.accent
+                fill.BorderSizePixel = 0
+                fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+                fill.ZIndex = 9
+                
+                local fillCorner = Instance.new("UICorner", fill)
+                fillCorner.CornerRadius = UDim.new(1, 0)
+                
+                -- 滑块手柄
+                local thumb = Instance.new("Frame")
+                thumb.Name = "Thumb"
+                thumb.Parent = track
+                thumb.BackgroundColor3 = colorScheme.text
+                thumb.BorderSizePixel = 0
+                thumb.Position = UDim2.new((default - min) / (max - min), -6, 0.5, -6)
+                thumb.Size = UDim2.new(0, 12, 0, 12)
+                thumb.ZIndex = 10
+                
+                local thumbCorner = Instance.new("UICorner", thumb)
+                thumbCorner.CornerRadius = UDim.new(1, 0)
+                
+                -- 值显示
+                local valueBox = Instance.new("TextBox")
+                valueBox.Name = "Value"
+                valueBox.Parent = slider
+                valueBox.BackgroundColor3 = colorScheme.main
+                valueBox.BackgroundTransparency = transparency.element
+                valueBox.BorderSizePixel = 0
+                valueBox.Position = UDim2.new(1, -70, 0, 5)
+                valueBox.Size = UDim2.new(0, 55, 0, 20)
+                valueBox.Font = Enum.Font.Gotham
+                valueBox.Text = tostring(default)
+                valueBox.TextColor3 = colorScheme.text
+                valueBox.TextSize = 14
+                valueBox.ZIndex = 8
+                
+                local valueCorner = Instance.new("UICorner", valueBox)
+                valueCorner.CornerRadius = UDim.new(0, 4)
+                
+                -- 设置值函数
+                local function setValue(value)
+                    value = math.clamp(value, min, max)
+                    library.flags[flag] = value
+                    
+                    local percent = (value - min) / (max - min)
+                    Tween(fill, {0.1, "Linear", "Out"}, {Size = UDim2.new(percent, 0, 1, 0)})
+                    Tween(thumb, {0.1, "Linear", "Out"}, {Position = UDim2.new(percent, -6, 0.5, -6)})
+                    
+                    valueBox.Text = tostring(value)
+                    callback(value)
+                end
+                
+                -- 滑块交互
+                local dragging = false
+                
+                track.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        isDragging = false
+                        dragging = true
+                        local percent = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
+                        setValue(math.floor(min + (max - min) * percent))
                     end
                 end)
                 
-                services.UserInputService.InputChanged:Connect(function(input)
-                    if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                        local relativeX = (mouse.X - SliderTrack.AbsolutePosition.X) / SliderTrack.AbsoluteSize.X
-                        relativeX = math.clamp(relativeX, 0, 1)
-                        local value = minValue + (maxValue - minValue) * relativeX
-                        SetValue(value)
+                userInputService.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        dragging = false
                     end
                 end)
                 
-                -- 返回控制函数
-                local slider = {}
+                userInputService.InputChanged:Connect(function(input)
+                    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                        local percent = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
+                        setValue(math.floor(min + (max - min) * percent))
+                    end
+                end)
                 
-                function slider:SetValue(value)
-                    SetValue(value)
-                end
+                -- 文本框输入
+                valueBox.FocusLost:Connect(function()
+                    local num = tonumber(valueBox.Text)
+                    if num then
+                        setValue(num)
+                    else
+                        valueBox.Text = tostring(library.flags[flag])
+                    end
+                end)
                 
-                function slider:GetValue()
-                    return currentValue
-                end
-                
-                return slider
+                return {
+                    SetValue = setValue
+                }
             end
             
-            function section:CreateDropdown(text, options, defaultOption, callback)
-                options = options or {}
-                defaultOption = defaultOption or options[1]
+            -- 下拉菜单元素
+            function section.Dropdown(section, text, flag, options, callback)
+                local callback = callback or function() end
+                local options = options or {}
+                assert(text, "No text provided")
+                assert(flag, "No flag provided")
                 
-                local DropdownFrame = Instance.new("Frame")
-                DropdownFrame.Name = "Dropdown_" .. text
-                DropdownFrame.BackgroundColor3 = ColorPalette.Dark.Tertiary
-                DropdownFrame.BackgroundTransparency = 0.5
-                DropdownFrame.BorderSizePixel = 0
-                DropdownFrame.ClipsDescendants = true
-                DropdownFrame.Size = UDim2.new(1, 0, 0, 40)
-                DropdownFrame.ZIndex = 5
-                DropdownFrame.Parent = ContentContainer
+                library.flags[flag] = nil
                 
-                local DropdownCorner = Instance.new("UICorner")
-                DropdownCorner.CornerRadius = UDim.new(0, 6)
-                DropdownCorner.Parent = DropdownFrame
+                local dropdown = Instance.new("Frame")
+                dropdown.Name = "Dropdown"
+                dropdown.Parent = contentFrame
+                dropdown.BackgroundColor3 = colorScheme.secondary
+                dropdown.BackgroundTransparency = transparency.element
+                dropdown.BorderSizePixel = 0
+                dropdown.Size = UDim2.new(1, 0, 0, 40)
+                dropdown.ClipsDescendants = true
+                dropdown.ZIndex = 7
                 
-                local DropdownButton = Instance.new("TextButton")
-                DropdownButton.Name = "DropdownButton"
-                DropdownButton.BackgroundTransparency = 1
-                DropdownButton.Size = UDim2.new(1, 0, 0, 40)
-                DropdownButton.Font = Enum.Font.GothamSemibold
-                DropdownButton.Text = "   " .. text
-                DropdownButton.TextColor3 = ColorPalette.Dark.Text
-                DropdownButton.TextSize = 14
-                DropdownButton.TextXAlignment = Enum.TextXAlignment.Left
-                DropdownButton.ZIndex = 6
-                DropdownButton.Parent = DropdownFrame
+                local dropdownCorner = Instance.new("UICorner", dropdown)
+                dropdownCorner.CornerRadius = UDim.new(0, 6)
                 
-                local SelectedLabel = Instance.new("TextLabel")
-                SelectedLabel.Name = "SelectedLabel"
-                SelectedLabel.AnchorPoint = Vector2.new(1, 0)
-                SelectedLabel.BackgroundTransparency = 1
-                SelectedLabel.Position = UDim2.new(1, -30, 0, 0)
-                SelectedLabel.Size = UDim2.new(0.5, -40, 1, 0)
-                SelectedLabel.Font = Enum.Font.Gotham
-                SelectedLabel.Text = defaultOption or ""
-                SelectedLabel.TextColor3 = accentColor
-                SelectedLabel.TextSize = 14
-                SelectedLabel.TextXAlignment = Enum.TextXAlignment.Right
-                SelectedLabel.ZIndex = 6
-                SelectedLabel.Parent = DropdownButton
+                -- 标题
+                local title = Instance.new("TextLabel")
+                title.Name = "Title"
+                title.Parent = dropdown
+                title.BackgroundTransparency = 1
+                title.Position = UDim2.new(0, 15, 0, 0)
+                title.Size = UDim2.new(1, -50, 0, 40)
+                title.Font = Enum.Font.GothamSemibold
+                title.Text = text
+                title.TextColor3 = colorScheme.text
+                title.TextSize = 16
+                title.TextXAlignment = Enum.TextXAlignment.Left
+                title.ZIndex = 8
                 
-                local DropdownIcon = Instance.new("ImageLabel")
-                DropdownIcon.Name = "DropdownIcon"
-                DropdownIcon.AnchorPoint = Vector2.new(1, 0.5)
-                DropdownIcon.BackgroundTransparency = 1
-                DropdownIcon.Position = UDim2.new(1, -10, 0.5, 0)
-                DropdownIcon.Size = UDim2.new(0, 20, 0, 20)
-                DropdownIcon.Image = MaterialAssets.ArrowDown
-                DropdownIcon.ImageColor3 = accentColor
-                DropdownIcon.ZIndex = 6
-                DropdownIcon.Parent = DropdownButton
+                -- 当前选择
+                local selected = Instance.new("TextLabel")
+                selected.Name = "Selected"
+                selected.Parent = dropdown
+                selected.BackgroundTransparency = 1
+                selected.Position = UDim2.new(0.5, 0, 0, 0)
+                selected.Size = UDim2.new(0.5, -15, 0, 40)
+                selected.Font = Enum.Font.Gotham
+                selected.Text = "None"
+                selected.TextColor3 = colorScheme.text
+                selected.TextSize = 14
+                selected.TextXAlignment = Enum.TextXAlignment.Right
+                selected.ZIndex = 8
                 
-                local OptionsFrame = Instance.new("Frame")
-                OptionsFrame.Name = "OptionsFrame"
-                OptionsFrame.BackgroundColor3 = ColorPalette.Dark.Secondary
-                OptionsFrame.BackgroundTransparency = 0.3
-                OptionsFrame.BorderSizePixel = 0
-                OptionsFrame.Position = UDim2.new(0, 5, 0, 45)
-                OptionsFrame.Size = UDim2.new(1, -10, 0, 0)
-                OptionsFrame.Visible = false
-                OptionsFrame.ZIndex = 5
-                OptionsFrame.Parent = DropdownFrame
+                -- 切换按钮
+                local toggle = Instance.new("ImageButton")
+                toggle.Name = "Toggle"
+                toggle.Parent = dropdown
+                toggle.BackgroundTransparency = 1
+                toggle.Position = UDim2.new(1, -35, 0.5, -12)
+                toggle.Size = UDim2.new(0, 24, 0, 24)
+                toggle.Image = "rbxassetid://6031302934" -- 向下箭头
+                toggle.ImageColor3 = colorScheme.accent
+                toggle.ZIndex = 8
                 
-                local OptionsCorner = Instance.new("UICorner")
-                OptionsCorner.CornerRadius = UDim.new(0, 6)
-                OptionsCorner.Parent = OptionsFrame
+                -- 选项容器
+                local optionsContainer = Instance.new("Frame")
+                optionsContainer.Name = "Options"
+                optionsContainer.Parent = dropdown
+                optionsContainer.BackgroundTransparency = 1
+                optionsContainer.Position = UDim2.new(0, 10, 0, 45)
+                optionsContainer.Size = UDim2.new(1, -20, 0, 0)
+                optionsContainer.ZIndex = 8
                 
-                local OptionsLayout = Instance.new("UIListLayout")
-                OptionsLayout.Name = "OptionsLayout"
-                OptionsLayout.Padding = UDim.new(0, 5)
-                OptionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                OptionsLayout.Parent = OptionsFrame
+                local optionsLayout = Instance.new("UIListLayout", optionsContainer)
+                optionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                optionsLayout.Padding = UDim.new(0, 5)
                 
-                -- 悬停效果
-                DropdownButton.MouseEnter:Connect(function()
-                    AdvancedTween.Tween(DropdownFrame, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.3
-                    })
-                    AdvancedTween.Tween(DropdownButton, {0.2, Enum.EasingStyle.Quad}, {
-                        TextColor3 = accentColor
-                    })
+                optionsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                    optionsContainer.Size = UDim2.new(1, -20, 0, optionsLayout.AbsoluteContentSize.Y)
+                    dropdown.Size = UDim2.new(1, 0, 0, optionsContainer.Size.Y.Offset + 50)
                 end)
                 
-                DropdownButton.MouseLeave:Connect(function()
-                    AdvancedTween.Tween(DropdownFrame, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.5
-                    })
-                    AdvancedTween.Tween(DropdownButton, {0.2, Enum.EasingStyle.Quad}, {
-                        TextColor3 = ColorPalette.Dark.Text
-                    })
-                end)
+                -- 切换状态
+                local isOpen = false
                 
-                -- 展开/折叠功能
-                local isExpanded = false
-                
-                local function ToggleDropdown()
-                    isExpanded = not isExpanded
+                local function toggleState()
+                    isOpen = not isOpen
                     
-                    AdvancedTween.Tween(DropdownIcon, {0.2, Enum.EasingStyle.Quad}, {
-                        Rotation = isExpanded and 180 or 0,
-                        ImageColor3 = isExpanded and ColorPalette.Dark.Text or accentColor
+                    Tween(toggle, {0.2, "Quint", "Out"}, {
+                        Rotation = isOpen and 180 or 0
                     })
                     
-                    OptionsFrame.Visible = isExpanded
-                    DropdownFrame.Size = UDim2.new(1, 0, 0, isExpanded and (45 + OptionsLayout.AbsoluteContentSize.Y + 10) or 40)
+                    if isOpen then
+                        Tween(dropdown, {0.2, "Quint", "Out"}, {
+                            Size = UDim2.new(1, 0, 0, optionsContainer.Size.Y.Offset + 50)
+                        })
+                    else
+                        Tween(dropdown, {0.2, "Quint", "Out"}, {
+                            Size = UDim2.new(1, 0, 0, 40)
+                        })
+                    end
                 end
                 
-                DropdownButton.MouseButton1Click:Connect(ToggleDropdown)
+                toggle.MouseButton1Click:Connect(toggleState)
                 
-                -- 选项自动调整大小
-                OptionsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                    if isExpanded then
-                        OptionsFrame.Size = UDim2.new(1, -10, 0, OptionsLayout.AbsoluteContentSize.Y)
-                        DropdownFrame.Size = UDim2.new(1, 0, 0, 45 + OptionsLayout.AbsoluteContentSize.Y + 10)
-                    end
-                end)
-                
-                -- 添加选项
-                local function AddOption(option)
-                    local OptionButton = Instance.new("TextButton")
-                    OptionButton.Name = "Option_" .. option
-                    OptionButton.BackgroundColor3 = ColorPalette.Dark.Tertiary
-                    OptionButton.BackgroundTransparency = 0.5
-                    OptionButton.BorderSizePixel = 0
-                    OptionButton.Size = UDim2.new(1, 0, 0, 30)
-                    OptionButton.AutoButtonColor = false
-                    OptionButton.Font = Enum.Font.Gotham
-                    OptionButton.Text = option
-                    OptionButton.TextColor3 = ColorPalette.Dark.Text
-                    OptionButton.TextSize = 14
-                    OptionButton.ZIndex = 6
-                    OptionButton.LayoutOrder = #OptionsFrame:GetChildren()
-                    OptionButton.Parent = OptionsFrame
+                -- 添加选项函数
+                local function addOption(option)
+                    local optionButton = Instance.new("TextButton")
+                    optionButton.Name = "Option_"..option
+                    optionButton.Parent = optionsContainer
+                    optionButton.BackgroundColor3 = colorScheme.main
+                    optionButton.BackgroundTransparency = transparency.element
+                    optionButton.BorderSizePixel = 0
+                    optionButton.Size = UDim2.new(1, 0, 0, 30)
+                    optionButton.AutoButtonColor = false
+                    optionButton.Font = Enum.Font.Gotham
+                    optionButton.Text = option
+                    optionButton.TextColor3 = colorScheme.text
+                    optionButton.TextSize = 14
+                    optionButton.ZIndex = 9
                     
-                    local OptionCorner = Instance.new("UICorner")
-                    OptionCorner.CornerRadius = UDim.new(0, 4)
-                    OptionCorner.Parent = OptionButton
+                    local optionCorner = Instance.new("UICorner", optionButton)
+                    optionCorner.CornerRadius = UDim.new(0, 4)
                     
-                    -- 悬停效果
-                    OptionButton.MouseEnter:Connect(function()
-                        AdvancedTween.Tween(OptionButton, {0.2, Enum.EasingStyle.Quad}, {
-                            BackgroundTransparency = 0.3,
-                            TextColor3 = accentColor
+                    -- 选项动画
+                    optionButton.MouseEnter:Connect(function()
+                        Tween(optionButton, {0.2, "Quint", "Out"}, {
+                            BackgroundTransparency = transparency.hover,
+                            TextColor3 = colorScheme.accent
                         })
                     end)
                     
-                    OptionButton.MouseLeave:Connect(function()
-                        AdvancedTween.Tween(OptionButton, {0.2, Enum.EasingStyle.Quad}, {
-                            BackgroundTransparency = 0.5,
-                            TextColor3 = ColorPalette.Dark.Text
+                    optionButton.MouseLeave:Connect(function()
+                        Tween(optionButton, {0.2, "Quint", "Out"}, {
+                            BackgroundTransparency = transparency.element,
+                            TextColor3 = colorScheme.text
                         })
                     end)
                     
-                    -- 选择功能
-                    OptionButton.MouseButton1Click:Connect(function()
-                        SelectedLabel.Text = option
-                        ToggleDropdown()
+                    optionButton.MouseButton1Click:Connect(function()
+                        selected.Text = option
+                        library.flags[flag] = option
+                        callback(option)
+                        toggleState()
+                    end)
+                end
+                
+                -- 添加初始选项
+                for _, option in pairs(options) do
+                    addOption(option)
+                end
+                
+                -- 下拉菜单功能
+                return {
+                    AddOption = function(self, option)
+                        addOption(option)
+                    end,
+                    RemoveOption = function(self, option)
+                        local option = optionsContainer:FindFirstChild("Option_"..option)
+                        if option then
+                            option:Destroy()
+                        end
+                    end,
+                    SetOptions = function(self, newOptions)
+                        optionsContainer:ClearAllChildren()
+                        optionsContainer.UIListLayout:Destroy()
+                        optionsLayout = Instance.new("UIListLayout", optionsContainer)
+                        optionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                        optionsLayout.Padding = UDim.new(0, 5)
                         
-                        if callback then
-                            callback(option)
-                        end
-                    end)
-                end
-                
-                -- 初始化选项
-                for _, option in ipairs(options) do
-                    AddOption(option)
-                end
-                
-                -- 返回控制函数
-                local dropdown = {}
-                
-                function dropdown:AddOption(option)
-                    AddOption(option)
-                end
-                
-                function dropdown:RemoveOption(option)
-                    local optionFrame = OptionsFrame:FindFirstChild("Option_" .. option)
-                    if optionFrame then
-                        optionFrame:Destroy()
-                    end
-                end
-                
-                function dropdown:SetOptions(newOptions)
-                    for _, child in ipairs(OptionsFrame:GetChildren()) do
-                        if child:IsA("TextButton") then
-                            child:Destroy()
+                        for _, option in pairs(newOptions) do
+                            addOption(option)
                         end
                     end
-                    
-                    for _, option in ipairs(newOptions) do
-                        AddOption(option)
-                    end
-                end
-                
-                function dropdown:GetSelected()
-                    return SelectedLabel.Text
-                end
-                
-                function dropdown:SetSelected(option)
-                    if table.find(options, option) then
-                        SelectedLabel.Text = option
-                        if callback then
-                            callback(option)
-                        end
-                    end
-                end
-                
-                return dropdown
-            end
-            
-            function section:CreateLabel(text)
-                local LabelFrame = Instance.new("Frame")
-                LabelFrame.Name = "Label_" .. text
-                LabelFrame.BackgroundTransparency = 1
-                LabelFrame.Size = UDim2.new(1, 0, 0, 20)
-                LabelFrame.ZIndex = 5
-                LabelFrame.Parent = ContentContainer
-                
-                local Label = Instance.new("TextLabel")
-                Label.Name = "Label"
-                Label.BackgroundTransparency = 1
-                Label.Size = UDim2.new(1, 0, 1, 0)
-                Label.Font = Enum.Font.Gotham
-                Label.Text = text
-                Label.TextColor3 = ColorPalette.Dark.Text
-                Label.TextSize = 14
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.ZIndex = 6
-                Label.Parent = LabelFrame
-                
-                return Label
-            end
-            
-            function section:CreateTextbox(placeholder, callback)
-                local TextboxFrame = Instance.new("Frame")
-                TextboxFrame.Name = "Textbox_" .. placeholder
-                TextboxFrame.BackgroundColor3 = ColorPalette.Dark.Tertiary
-                TextboxFrame.BackgroundTransparency = 0.5
-                TextboxFrame.BorderSizePixel = 0
-                TextboxFrame.Size = UDim2.new(1, 0, 0, 36)
-                TextboxFrame.ZIndex = 5
-                TextboxFrame.Parent = ContentContainer
-                
-                local TextboxCorner = Instance.new("UICorner")
-                TextboxCorner.CornerRadius = UDim.new(0, 6)
-                TextboxCorner.Parent = TextboxFrame
-                
-                local Textbox = Instance.new("TextBox")
-                Textbox.Name = "Textbox"
-                Textbox.BackgroundTransparency = 1
-                Textbox.Position = UDim2.new(0, 10, 0, 0)
-                Textbox.Size = UDim2.new(1, -20, 1, 0)
-                Textbox.Font = Enum.Font.Gotham
-                Textbox.PlaceholderText = placeholder
-                Textbox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-                Textbox.Text = ""
-                Textbox.TextColor3 = ColorPalette.Dark.Text
-                Textbox.TextSize = 14
-                Textbox.TextXAlignment = Enum.TextXAlignment.Left
-                Textbox.ZIndex = 6
-                Textbox.Parent = TextboxFrame
-                
-                -- 悬停效果
-                TextboxFrame.MouseEnter:Connect(function()
-                    AdvancedTween.Tween(TextboxFrame, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.3
-                    })
-                end)
-                
-                TextboxFrame.MouseLeave:Connect(function()
-                    AdvancedTween.Tween(TextboxFrame, {0.2, Enum.EasingStyle.Quad}, {
-                        BackgroundTransparency = 0.5
-                    })
-                end)
-                
-                -- 输入功能
-                Textbox.FocusLost:Connect(function()
-                    if callback then
-                        callback(Textbox.Text)
-                    end
-                end)
-                
-                -- 返回控制函数
-                local textbox = {}
-                
-                function textbox:SetText(text)
-                    Textbox.Text = text
-                end
-                
-                function textbox:GetText()
-                    return Textbox.Text
-                end
-                
-                return textbox
+                }
             end
             
             return section
