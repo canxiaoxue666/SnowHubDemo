@@ -201,15 +201,31 @@ function library.new(library, name, theme)
         dogent:Destroy()
     end
 
-    function ToggleUILib()
-        if not ToggleUI then
-            dogent.Enabled = false
-            ToggleUI = true
-        else
-            ToggleUI = false
-            dogent.Enabled = true
-        end
+
+-- 修改ToggleUI函数以正确处理动画
+function ToggleUILib()
+    if not ToggleUI then
+        -- 隐藏时停止所有动画
+        borderTween:Pause()
+        glowTween:Pause()
+        Glow.Visible = false
+        Border.Visible = false
+        
+        dogent.Enabled = false
+        ToggleUI = true
+    else
+        -- 显示时恢复所有动画
+        Border.Visible = true
+        Glow.Visible = true
+        borderTween:Play()
+        glowTween:Play()
+        
+        ToggleUI = false
+        dogent.Enabled = true
     end
+end
+
+
 
     -- 主窗口
     Main.Name = "Main"
@@ -224,37 +240,61 @@ function library.new(library, name, theme)
     Main.Active = true
     Main.Draggable = true
 
-    -- 彩色边框
-    Border.Name = "Border"
-    Border.Parent = Main
-    Border.BackgroundColor3 = Color3.new(1, 1, 1)
-    Border.BorderSizePixel = 0
-    Border.Size = UDim2.new(1, 0, 1, 0)
-    Border.ZIndex = 0
-    
-    -- 更炫彩的彩虹色渐变
-    BorderGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-        ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 128, 0)),
-        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 255, 0)),
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 0)),
-        ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
-        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(128, 0, 255)),
-        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 255))
-    }
-    BorderGradient.Rotation = 90
-    BorderGradient.Parent = Border
-    
-    local UICorner = Instance.new("UICorner", Border)
-    UICorner.CornerRadius = UDim.new(0, 8)
-    
-    -- 更流畅的边框动画
-    local borderTween = game:GetService("TweenService"):Create(
-        BorderGradient,
-        TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
-        {Rotation = 360, Offset = Vector2.new(1, 0)}
-    )
-    borderTween:Play()
+-- 在Main框架创建后添加彩色边框
+local Border = Instance.new("Frame")
+Border.Name = "Border"
+Border.Parent = Main
+Border.BackgroundColor3 = Color3.new(1, 1, 1)
+Border.BorderSizePixel = 0
+Border.Size = UDim2.new(1, 0, 1, 0)
+Border.ZIndex = 0
+
+-- 更炫彩的彩虹色渐变
+local BorderGradient = Instance.new("UIGradient")
+BorderGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+    ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 128, 0)),
+    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 255, 0)),
+    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 0)),
+    ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
+    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(128, 0, 255)),
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 255))
+}
+BorderGradient.Rotation = 90
+BorderGradient.Parent = Border
+
+local UICorner = Instance.new("UICorner", Border)
+UICorner.CornerRadius = UDim.new(0, 8)
+
+-- 更流畅的边框动画
+local borderTween = game:GetService("TweenService"):Create(
+    BorderGradient,
+    TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+    {Rotation = 360, Offset = Vector2.new(1, 0)}
+)
+borderTween:Play()
+
+-- 添加背景光晕效果
+local Glow = Instance.new("ImageLabel")
+Glow.Name = "Glow"
+Glow.Parent = Main
+Glow.BackgroundTransparency = 1
+Glow.ZIndex = -1
+Glow.Image = "rbxassetid://5028857084"
+Glow.ImageColor3 = AccentColor
+Glow.ScaleType = Enum.ScaleType.Slice
+Glow.SliceCenter = Rect.new(24, 24, 276, 276)
+Glow.Size = UDim2.new(1, 40, 1, 40)
+Glow.Position = UDim2.new(0.5, -20, 0.5, -20)
+Glow.AnchorPoint = Vector2.new(0.5, 0.5)
+
+-- 光晕动画
+local glowTween = game:GetService("TweenService"):Create(
+    Glow,
+    TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {ImageTransparency = 0.7}
+)
+glowTween:Play()
 
     -- 主窗口圆角
     UICornerMain.Parent = Main
@@ -537,17 +577,29 @@ local isVisible = true
 local hiddenImage = "rbxassetid://7734068321"  -- 替换为"隐藏"状态的图片ID
 local shownImage = "rbxassetid://7734068321"  -- 替换为"显示"状态的图片ID
 
+-- 修改Open按钮的点击事件以正确处理动画
 Open.MouseButton1Click:Connect(function()
     if isVisible then
+        -- 隐藏时停止所有动画
+        borderTween:Pause()
+        glowTween:Pause()
+        Glow.Visible = false
+        Border.Visible = false
+        
         Tween(Main, {0.2, "Quad", "Out"}, {Size = UDim2.new(0, 0, 0, 0)})
         OpenImage.Image = hiddenImage
     else
+        -- 显示时恢复所有动画
+        Border.Visible = true
+        Glow.Visible = true
+        borderTween:Play()
+        glowTween:Play()
+        
         Tween(Main, {0.2, "Quad", "Out"}, {Size = UDim2.new(0, 572, 0, 353)})
         OpenImage.Image = shownImage
     end
     isVisible = not isVisible
 end)
-
     UIG.Parent = Open
     local window = {}
     
