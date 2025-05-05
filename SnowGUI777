@@ -489,7 +489,6 @@ function library.new(library, name, theme)
     OpenImage.Position = UDim2.new(0.1, 0, 0.1, 0)
     OpenImage.Image = "rbxassetid://7734068321"
     OpenImage.ScaleType = Enum.ScaleType.Fit
-    OpenImage.ImageColor3 = AccentColor
     OpenImage.ZIndex = 6
 
     -- 按钮圆角
