@@ -18,12 +18,18 @@ local services =
 
 local mouse = services.Players.LocalPlayer:GetMouse()
 
-function Tween(obj, t, data)
-    services.TweenService:Create(obj, TweenInfo.new(t[1], Enum.EasingStyle[t[2]], Enum.EasingDirection[t[3]]), data):Play()
-    return true
+-- 增强的Tween函数，支持回调
+function Tween(obj, t, data, callback)
+    local tween = services.TweenService:Create(obj, TweenInfo.new(t[1], Enum.EasingStyle[t[2]], Enum.EasingDirection[t[3]]), data)
+    tween:Play()
+    if callback then
+        tween.Completed:Connect(callback)
+    end
+    return tween
 end
 
-function Ripple(obj)
+-- 改进的Ripple效果，支持自定义颜色
+function Ripple(obj, color)
     spawn(
         function()
             if obj.ClipsDescendants ~= true then
@@ -38,7 +44,7 @@ function Ripple(obj)
             Ripple.Image = "rbxassetid://2708891598"
             Ripple.ImageTransparency = 0.800
             Ripple.ScaleType = Enum.ScaleType.Fit
-            Ripple.ImageColor3 = Color3.fromRGB(255, 255, 255)
+            Ripple.ImageColor3 = color or Color3.fromRGB(100, 150, 255)
             Ripple.Position =
                 UDim2.new(
                 (mouse.X - Ripple.AbsolutePosition.X) / obj.AbsoluteSize.X,
@@ -48,12 +54,12 @@ function Ripple(obj)
             )
             Tween(
                 Ripple,
-                {.3, "Linear", "InOut"},
+                {0.3, "Linear", "InOut"},
                 {Position = UDim2.new(-5.5, 0, -5.5, 0), Size = UDim2.new(12, 0, 12, 0)}
             )
             wait(0.15)
-            Tween(Ripple, {.3, "Linear", "InOut"}, {ImageTransparency = 1})
-            wait(.3)
+            Tween(Ripple, {0.3, "Linear", "InOut"}, {ImageTransparency = 1})
+            wait(0.3)
             Ripple:Destroy()
         end
     )
@@ -61,7 +67,7 @@ end
 
 local toggled = false
 
--- # Switch Tabs # --
+-- 改进的标签切换动画
 local switchingTabs = false
 function switchTab(new)
     if switchingTabs then
@@ -71,8 +77,8 @@ function switchTab(new)
     if old == nil then
         new[2].Visible = true
         library.currentTab = new
-        services.TweenService:Create(new[1], TweenInfo.new(0.1), {ImageTransparency = 0}):Play()
-        services.TweenService:Create(new[1].TabText, TweenInfo.new(0.1), {TextTransparency = 0}):Play()
+        Tween(new[1], {0.15, "Quint", "Out"}, {ImageTransparency = 0})
+        Tween(new[1].TabText, {0.15, "Quint", "Out"}, {TextTransparency = 0})
         return
     end
 
@@ -82,20 +88,25 @@ function switchTab(new)
     switchingTabs = true
     library.currentTab = new
 
-    services.TweenService:Create(old[1], TweenInfo.new(0.1), {ImageTransparency = 0.2}):Play()
-    services.TweenService:Create(new[1], TweenInfo.new(0.1), {ImageTransparency = 0}):Play()
-    services.TweenService:Create(old[1].TabText, TweenInfo.new(0.1), {TextTransparency = 0.2}):Play()
-    services.TweenService:Create(new[1].TabText, TweenInfo.new(0.1), {TextTransparency = 0}):Play()
+    -- 添加缩放动画
+    Tween(old[1], {0.15, "Quint", "Out"}, {ImageTransparency = 0.2, Size = UDim2.new(0, 24, 0, 24)})
+    Tween(new[1], {0.15, "Quint", "Out"}, {ImageTransparency = 0, Size = UDim2.new(0, 28, 0, 28)})
+    Tween(old[1].TabText, {0.15, "Quint", "Out"}, {TextTransparency = 0.2})
+    Tween(new[1].TabText, {0.15, "Quint", "Out"}, {TextTransparency = 0})
 
-    old[2].Visible = false
+    -- 添加淡入淡出动画
+    Tween(old[2], {0.1, "Linear", "InOut"}, {BackgroundTransparency = 1}, function()
+        old[2].Visible = false
+    end)
     new[2].Visible = true
+    new[2].BackgroundTransparency = 1
+    Tween(new[2], {0.1, "Linear", "InOut"}, {BackgroundTransparency = 0})
 
-    task.wait(0.1)
-
+    task.wait(0.15)
     switchingTabs = false
 end
 
--- # Drag, Stolen from Kiriot or Wally # --
+-- 改进的拖拽功能
 function drag(frame, hold)
     if not hold then
         hold = frame
@@ -107,21 +118,28 @@ function drag(frame, hold)
 
     local function update(input)
         local delta = input.Position - dragStart
-        frame.Position =
-            UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        
+        -- 添加弹性效果
+        Tween(frame, {0.1, "Quad", "Out"}, {Position = newPos})
     end
 
     hold.InputBegan:Connect(
         function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 dragStart = input.Position
                 startPos = frame.Position
+                
+                -- 添加按下效果
+                Tween(frame, {0.1, "Quad", "Out"}, {Size = UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset * 0.98, frame.Size.Y.Scale, frame.Size.Y.Offset * 0.98)})
 
                 input.Changed:Connect(
                     function()
                         if input.UserInputState == Enum.UserInputState.End then
                             dragging = false
+                            -- 添加释放效果
+                            Tween(frame, {0.2, "Elastic", "Out"}, {Size = UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset / 0.98, frame.Size.Y.Scale, frame.Size.Y.Offset / 0.98)})
                         end
                     end
                 )
@@ -131,7 +149,7 @@ function drag(frame, hold)
 
     frame.InputChanged:Connect(
         function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement then
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                 dragInput = input
             end
         end
@@ -153,17 +171,21 @@ function library.new(library, name, theme)
         end
     end
 
-    -- 暗黑风格配色
-    local MainColor = Color3.fromRGB(30, 30, 40)
+    -- 现代化配色方案
+    local MainColor = Color3.fromRGB(25, 25, 35)
     local Background = Color3.fromRGB(20, 20, 30)
-    local zyColor = Color3.fromRGB(50, 50, 70)
-    local beijingColor = Color3.fromRGB(70, 70, 90)
-    local AccentColor = Color3.fromRGB(100, 150, 255) -- 蓝色作为点缀色
+    local zyColor = Color3.fromRGB(45, 45, 60)
+    local beijingColor = Color3.fromRGB(65, 65, 85)
+    local AccentColor = Color3.fromRGB(100, 150, 255)
+    local TextColor = Color3.fromRGB(240, 240, 240)
+    local SecondaryTextColor = Color3.fromRGB(180, 180, 180)
 
-    -- 半透明效果
-    local Transparency = 0.3
+    -- 透明度设置
+    local Transparency = 0.25
     local HoverTransparency = 0.1
+    local ActiveTransparency = 0.05
 
+    -- 创建主UI
     local dogent = Instance.new("ScreenGui")
     local Main = Instance.new("Frame")
     local TabMain = Instance.new("Frame")
@@ -185,10 +207,7 @@ function library.new(library, name, theme)
     local UIGradientTitle = Instance.new("UIGradient")
     local Border = Instance.new("Frame")
     local BorderGradient = Instance.new("UIGradient")
-    
-    -- 新增粒子效果
-    local ParticleEmitter = Instance.new("Frame")
-    local Particles = {}
+    local GlowEffect = Instance.new("ImageLabel")
 
     if syn and syn.protect_gui then
         syn.protect_gui(dogent)
@@ -196,38 +215,28 @@ function library.new(library, name, theme)
 
     dogent.Name = "frosty is cute"
     dogent.Parent = services.CoreGui
+    dogent.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     function UiDestroy()
-        dogent:Destroy()
+        Tween(dogent, {0.3, "Quint", "Out"}, {Size = UDim2.new(0,0,0,0)}, function()
+            dogent:Destroy()
+        end)
     end
 
-
--- 修改ToggleUI函数以正确处理动画
-function ToggleUILib()
-    if not ToggleUI then
-        -- 隐藏时停止所有动画
-        borderTween:Pause()
-        glowTween:Pause()
-        Glow.Visible = false
-        Border.Visible = false
-        
-        dogent.Enabled = false
-        ToggleUI = true
-    else
-        -- 显示时恢复所有动画
-        Border.Visible = true
-        Glow.Visible = true
-        borderTween:Play()
-        glowTween:Play()
-        
-        ToggleUI = false
-        dogent.Enabled = true
+    function ToggleUILib()
+        if not ToggleUI then
+            Tween(dogent, {0.3, "Quint", "Out"}, {Size = UDim2.new(0,0,0,0)}, function()
+                dogent.Enabled = false
+            end)
+            ToggleUI = true
+        else
+            dogent.Enabled = true
+            Tween(dogent, {0.3, "Elastic", "Out"}, {Size = UDim2.new(1,0,1,0)})
+            ToggleUI = false
+        end
     end
-end
 
-
-
-    -- 主窗口
+    -- 主窗口 - 现代化设计
     Main.Name = "Main"
     Main.Parent = dogent
     Main.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -235,66 +244,51 @@ end
     Main.BackgroundTransparency = Transparency
     Main.BorderSizePixel = 0
     Main.Position = UDim2.new(0.5, 0, 0.5, 0)
-    Main.Size = UDim2.new(0, 572, 0, 353)
-    Main.ZIndex = 1
+    Main.Size = UDim2.new(0, 600, 0, 400)
+    Main.ZIndex = 2
     Main.Active = true
-    Main.Draggable = true
 
--- 在Main框架创建后添加彩色边框
-local Border = Instance.new("Frame")
-Border.Name = "Border"
-Border.Parent = Main
-Border.BackgroundColor3 = Color3.new(1, 1, 1)
-Border.BorderSizePixel = 0
-Border.Size = UDim2.new(1, 0, 1, 0)
-Border.ZIndex = 0
+    -- 发光效果
+    GlowEffect.Name = "GlowEffect"
+    GlowEffect.Parent = Main
+    GlowEffect.BackgroundTransparency = 1
+    GlowEffect.BorderSizePixel = 0
+    GlowEffect.Size = UDim2.new(1, 40, 1, 40)
+    GlowEffect.Position = UDim2.new(0, -20, 0, -20)
+    GlowEffect.Image = "rbxassetid://5028857084"
+    GlowEffect.ImageColor3 = AccentColor
+    GlowEffect.ImageTransparency = 0.8
+    GlowEffect.ScaleType = Enum.ScaleType.Slice
+    GlowEffect.SliceCenter = Rect.new(24, 24, 276, 276)
+    GlowEffect.ZIndex = 1
 
--- 更炫彩的彩虹色渐变
-local BorderGradient = Instance.new("UIGradient")
-BorderGradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-    ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 128, 0)),
-    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 255, 0)),
-    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 0)),
-    ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
-    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(128, 0, 255)),
-    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 255))
-}
-BorderGradient.Rotation = 90
-BorderGradient.Parent = Border
-
-local UICorner = Instance.new("UICorner", Border)
-UICorner.CornerRadius = UDim.new(0, 8)
-
--- 更流畅的边框动画
-local borderTween = game:GetService("TweenService"):Create(
-    BorderGradient,
-    TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
-    {Rotation = 360, Offset = Vector2.new(1, 0)}
-)
-borderTween:Play()
-
--- 添加背景光晕效果
-local Glow = Instance.new("ImageLabel")
-Glow.Name = "Glow"
-Glow.Parent = Main
-Glow.BackgroundTransparency = 1
-Glow.ZIndex = -1
-Glow.Image = "rbxassetid://5028857084"
-Glow.ImageColor3 = AccentColor
-Glow.ScaleType = Enum.ScaleType.Slice
-Glow.SliceCenter = Rect.new(24, 24, 276, 276)
-Glow.Size = UDim2.new(1, 40, 1, 40)
-Glow.Position = UDim2.new(0.5, -20, 0.5, -20)
-Glow.AnchorPoint = Vector2.new(0.5, 0.5)
-
--- 光晕动画
-local glowTween = game:GetService("TweenService"):Create(
-    Glow,
-    TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-    {ImageTransparency = 0.7}
-)
-glowTween:Play()
+    -- 彩色边框动画
+    Border.Name = "Border"
+    Border.Parent = Main
+    Border.BackgroundColor3 = Color3.new(1, 1, 1)
+    Border.BorderSizePixel = 0
+    Border.Size = UDim2.new(1, 0, 1, 0)
+    Border.ZIndex = 0
+    
+    BorderGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 100, 100)),
+        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(100, 255, 100)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(100, 100, 255)),
+        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(255, 255, 100)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 100, 255))
+    }
+    BorderGradient.Rotation = 90
+    BorderGradient.Parent = Border
+    
+    local UICorner = Instance.new("UICorner", Border)
+    UICorner.CornerRadius = UDim.new(0, 8)
+    
+    local borderTween = game:GetService("TweenService"):Create(
+        BorderGradient,
+        TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true),
+        {Rotation = 360}
+    )
+    borderTween:Play()
 
     -- 主窗口圆角
     UICornerMain.Parent = Main
@@ -329,127 +323,66 @@ glowTween:Play()
         ColorSequenceKeypoint.new(0.50, Color3.fromRGB(50, 50, 70)),
         ColorSequenceKeypoint.new(1.00, Color3.fromRGB(30, 30, 40))
     }
+    UIGradient.Rotation = 45
     UIGradient.Parent = Main
 
     local TweenService = game:GetService("TweenService")
-    local tweeninfo = TweenInfo.new(10, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1)
+    local tweeninfo = TweenInfo.new(15, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1, true)
     local tween = TweenService:Create(UIGradient, tweeninfo, {Rotation = 360})
     tween:Play()
 
-    -- 粒子效果
-    ParticleEmitter.Name = "ParticleEmitter"
-    ParticleEmitter.Parent = Main
-    ParticleEmitter.BackgroundTransparency = 1
-    ParticleEmitter.Size = UDim2.new(1, 0, 1, 0)
-    ParticleEmitter.ZIndex = -1
-    
-    -- 创建粒子
-    local function createParticle()
-        local particle = Instance.new("Frame")
-        particle.Name = "Particle"
-        particle.Parent = ParticleEmitter
-        particle.BackgroundColor3 = Color3.fromRGB(math.random(50, 200), math.random(50, 200), math.random(50, 200))
-        particle.Size = UDim2.new(0, math.random(2, 6), 0, math.random(2, 6))
-        particle.Position = UDim2.new(0, math.random(0, 572), 0, math.random(0, 353))
-        particle.AnchorPoint = Vector2.new(0.5, 0.5)
-        particle.BorderSizePixel = 0
-        
-        local corner = Instance.new("UICorner", particle)
-        corner.CornerRadius = UDim.new(1, 0)
-        
-        table.insert(Particles, {
-            Instance = particle,
-            Speed = Vector2.new(math.random(-10, 10)/100, math.random(-10, 10)/100),
-            LifeTime = math.random(50, 150)
-        })
-    end
-    
-    -- 初始化粒子
-    for i = 1, 30 do
-        createParticle()
-    end
-    
-    -- 粒子动画
-    spawn(function()
-        while wait(0.03) and ParticleEmitter.Parent do
-            for i, particle in ipairs(Particles) do
-                if particle.LifeTime <= 0 then
-                    particle.Instance:Destroy()
-                    createParticle()
-                    table.remove(Particles, i)
-                else
-                    particle.LifeTime = particle.LifeTime - 1
-                    local currentPos = particle.Instance.Position
-                    local newPos = UDim2.new(
-                        currentPos.X.Scale, 
-                        currentPos.X.Offset + particle.Speed.X,
-                        currentPos.Y.Scale,
-                        currentPos.Y.Offset + particle.Speed.Y
-                    )
-                    
-                    -- 边界检查
-                    if newPos.X.Offset < 0 or newPos.X.Offset > 572 then
-                        particle.Speed = Vector2.new(-particle.Speed.X, particle.Speed.Y)
-                    end
-                    if newPos.Y.Offset < 0 or newPos.Y.Offset > 353 then
-                        particle.Speed = Vector2.new(particle.Speed.X, -particle.Speed.Y)
-                    end
-                    
-                    particle.Instance.Position = newPos
-                    particle.Instance.BackgroundTransparency = particle.LifeTime / 150
-                end
-            end
-        end
-    end)
+    -- 发光效果动画
+    local glowTween = TweenService:Create(
+        GlowEffect,
+        TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        {ImageTransparency = 0.7}
+    )
+    glowTween:Play()
 
+    -- 键盘快捷键控制
     services.UserInputService.InputEnded:Connect(
         function(input)
-            if input.KeyCode == Enum.KeyCode.LeftControl then
-                if Main.Visible == true then
+            if input.KeyCode == Enum.KeyCode.RightShift then
+                Tween(Main, {0.3, "Quint", "Out"}, {
+                    Size = UDim2.new(0, Main.Size.X.Offset, 0, 0),
+                    Position = UDim2.new(0.5, 0, 0.5, 0)
+                }, function()
                     Main.Visible = false
-                else
-                    Main.Visible = true
-                end
+                end)
+            elseif input.KeyCode == Enum.KeyCode.LeftShift then
+                Main.Visible = true
+                Tween(Main, {0.3, "Elastic", "Out"}, {
+                    Size = UDim2.new(0, 600, 0, 400),
+                    Position = UDim2.new(0.5, 0, 0.5, 0)
+                })
             end
         end
     )
+    
+    -- 改进的拖拽功能
     drag(Main)
 
-    function toggleui()
-        toggled = not toggled
-        spawn(
-            function()
-                if toggled then
-                    wait(0.3)
-                end
-            end
-        )
-        Tween(
-            Main,
-            {0.3, "Sine", "InOut"},
-            {
-                Size = UDim2.new(0, 609, 0, (toggled and 505 or 0))
-            }
-        )
-    end
-
+    -- 标签主区域
     TabMain.Name = "TabMain"
     TabMain.Parent = Main
     TabMain.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     TabMain.BackgroundTransparency = 1.000
-    TabMain.Position = UDim2.new(0.217000037, 0, 0, 3)
-    TabMain.Size = UDim2.new(0, 448, 0, 353)
+    TabMain.Position = UDim2.new(0.25, 0, 0, 3)
+    TabMain.Size = UDim2.new(0, 450, 0, 397)
+    TabMain.ZIndex = 3
 
     MainC.CornerRadius = UDim.new(0, 5.5)
     MainC.Name = "MainC"
     MainC.Parent = Main
 
+    -- 侧边栏
     SB.Name = "SB"
     SB.Parent = Main
     SB.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     SB.BackgroundTransparency = Transparency
     SB.BorderSizePixel = 0
-    SB.Size = UDim2.new(0, 8, 0, 353)
+    SB.Size = UDim2.new(0, 8, 0, 400)
+    SB.ZIndex = 3
 
     SBC.CornerRadius = UDim.new(0, 6)
     SBC.Name = "SBC"
@@ -462,7 +395,8 @@ glowTween:Play()
     Side.BorderSizePixel = 0
     Side.ClipsDescendants = true
     Side.Position = UDim2.new(1, 0, 0, 0)
-    Side.Size = UDim2.new(0, 110, 0, 353)
+    Side.Size = UDim2.new(0, 120, 0, 400)
+    Side.ZIndex = 3
 
     -- 侧边栏渐变
     SideG.Color = ColorSequence.new{
@@ -479,28 +413,31 @@ glowTween:Play()
     TabBtns.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     TabBtns.BackgroundTransparency = 1.000
     TabBtns.BorderSizePixel = 0
-    TabBtns.Position = UDim2.new(0, 0, 0.0973535776, 0)
-    TabBtns.Size = UDim2.new(0, 110, 0, 318)
+    TabBtns.Position = UDim2.new(0, 0, 0.097, 0)
+    TabBtns.Size = UDim2.new(0, 120, 0, 360)
     TabBtns.CanvasSize = UDim2.new(0, 0, 1, 0)
     TabBtns.ScrollBarThickness = 0
+    TabBtns.ZIndex = 4
 
     TabBtnsL.Name = "TabBtnsL"
     TabBtnsL.Parent = TabBtns
     TabBtnsL.SortOrder = Enum.SortOrder.LayoutOrder
     TabBtnsL.Padding = UDim.new(0, 12)
 
+    -- 脚本标题
     ScriptTitle.Name = "ScriptTitle"
     ScriptTitle.Parent = Side
     ScriptTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     ScriptTitle.BackgroundTransparency = 1.000
-    ScriptTitle.Position = UDim2.new(0, 0, 0.00953488424, 0)
-    ScriptTitle.Size = UDim2.new(0, 102, 0, 20)
-    ScriptTitle.Font = Enum.Font.GothamSemibold
+    ScriptTitle.Position = UDim2.new(0, 0, 0.009, 0)
+    ScriptTitle.Size = UDim2.new(0, 110, 0, 24)
+    ScriptTitle.Font = Enum.Font.GothamBold
     ScriptTitle.Text = name
     ScriptTitle.TextColor3 = AccentColor
-    ScriptTitle.TextSize = 14.000
+    ScriptTitle.TextSize = 16.000
     ScriptTitle.TextScaled = true
     ScriptTitle.TextXAlignment = Enum.TextXAlignment.Left
+    ScriptTitle.ZIndex = 4
     
     -- 标题渐变
     UIGradientTitle.Color = ColorSequence.new{
@@ -510,10 +447,10 @@ glowTween:Play()
     }
     UIGradientTitle.Parent = ScriptTitle
 
-    -- 标题动画 - 更流畅的动画
+    -- 标题动画
     local titleTween = game:GetService("TweenService"):Create(
         UIGradientTitle,
-        TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1),
+        TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true),
         {Offset = Vector2.new(1, 0)}
     )
     titleTween:Play()
@@ -529,77 +466,80 @@ glowTween:Play()
         end
     )
 
--- 打开/关闭按钮（图片版）
-Open.Name = "Open"
-Open.Parent = dogent
-Open.BackgroundColor3 = Background
-Open.BackgroundTransparency = Transparency
-Open.Position = UDim2.new(0.00829315186, 0, 0.31107837, 0)
-Open.Size = UDim2.new(0, 50, 0, 50)
-Open.Font = Enum.Font.SourceSans
-Open.Text = ""  -- 清空文本
-Open.TextTransparency = 1  -- 完全透明文本
-Open.TextSize = 14.000
-Open.Active = true
-Open.Draggable = true
+    -- 现代化开关按钮
+    Open.Name = "Open"
+    Open.Parent = dogent
+    Open.BackgroundColor3 = Background
+    Open.BackgroundTransparency = Transparency
+    Open.Position = UDim2.new(0.01, 0, 0.3, 0)
+    Open.Size = UDim2.new(0, 50, 0, 50)
+    Open.Font = Enum.Font.SourceSans
+    Open.Text = ""
+    Open.TextTransparency = 1
+    Open.TextSize = 14.000
+    Open.ZIndex = 5
+    Open.Active = true
 
--- 添加图片
-local OpenImage = Instance.new("ImageLabel")
-OpenImage.Name = "OpenImage"
-OpenImage.Parent = Open
-OpenImage.BackgroundTransparency = 1
-OpenImage.Size = UDim2.new(1, 0, 1, 0)
-OpenImage.Image = "rbxassetid://7734068321"  -- 替换为你的默认图片ID
-OpenImage.ScaleType = Enum.ScaleType.Fit
+    -- 添加图标
+    local OpenImage = Instance.new("ImageLabel")
+    OpenImage.Name = "OpenImage"
+    OpenImage.Parent = Open
+    OpenImage.BackgroundTransparency = 1
+    OpenImage.Size = UDim2.new(0.8, 0, 0.8, 0)
+    OpenImage.Position = UDim2.new(0.1, 0, 0.1, 0)
+    OpenImage.Image = "rbxassetid://7734068321"
+    OpenImage.ScaleType = Enum.ScaleType.Fit
+    OpenImage.ImageColor3 = AccentColor
+    OpenImage.ZIndex = 6
 
--- 按钮圆角
-local UICorner = Instance.new("UICorner", Open)
-UICorner.CornerRadius = UDim.new(0, 9)
+    -- 按钮圆角
+    local OpenCorner = Instance.new("UICorner", Open)
+    OpenCorner.CornerRadius = UDim.new(0.2, 0)
 
--- 按钮悬停效果 - 更流畅的动画
-Open.MouseEnter:Connect(function()
-    game:GetService("TweenService"):Create(
-        Open,
-        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = HoverTransparency, Size = UDim2.new(0, 55, 0, 55)}
-    ):Play()
-end)
+    -- 按钮悬停效果
+    Open.MouseEnter:Connect(function()
+        Tween(Open, {0.2, "Quad", "Out"}, {
+            BackgroundTransparency = HoverTransparency,
+            Rotation = 15
+        })
+        Tween(OpenImage, {0.2, "Quad", "Out"}, {
+            ImageColor3 = Color3.fromRGB(255, 255, 255),
+            Size = UDim2.new(0.9, 0, 0.9, 0)
+        })
+    end)
 
-Open.MouseLeave:Connect(function()
-    game:GetService("TweenService"):Create(
-        Open,
-        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = Transparency, Size = UDim2.new(0, 50, 0, 50)}
-    ):Play()
-end)
+    Open.MouseLeave:Connect(function()
+        Tween(Open, {0.2, "Quad", "Out"}, {
+            BackgroundTransparency = Transparency,
+            Rotation = 0
+        })
+        Tween(OpenImage, {0.2, "Quad", "Out"}, {
+            ImageColor3 = AccentColor,
+            Size = UDim2.new(0.8, 0, 0.8, 0)
+        })
+    end)
 
-local isVisible = true
-local hiddenImage = "rbxassetid://7734068321"  -- 替换为"隐藏"状态的图片ID
-local shownImage = "rbxassetid://7734068321"  -- 替换为"显示"状态的图片ID
+    local isVisible = true
+    Open.MouseButton1Click:Connect(function()
+        if isVisible then
+            Tween(Main, {0.3, "Quint", "Out"}, {
+                Size = UDim2.new(0, Main.Size.X.Offset, 0, 0),
+                Position = UDim2.new(0.5, 0, 0.5, 0)
+            }, function()
+                Main.Visible = false
+            end)
+            Tween(OpenImage, {0.3, "Quad", "Out"}, {Rotation = 180})
+        else
+            Main.Visible = true
+            Tween(Main, {0.3, "Elastic", "Out"}, {
+                Size = UDim2.new(0, 600, 0, 400),
+                Position = UDim2.new(0.5, 0, 0.5, 0)
+            })
+            Tween(OpenImage, {0.3, "Quad", "Out"}, {Rotation = 0})
+        end
+        isVisible = not isVisible
+    end)
 
--- 修改Open按钮的点击事件以正确处理动画
-Open.MouseButton1Click:Connect(function()
-    if isVisible then
-        -- 隐藏时停止所有动画
-        borderTween:Pause()
-        glowTween:Pause()
-        Glow.Visible = false
-        Border.Visible = false
-        
-        Tween(Main, {0.2, "Quad", "Out"}, {Size = UDim2.new(0, 0, 0, 0)})
-        OpenImage.Image = hiddenImage
-    else
-        -- 显示时恢复所有动画
-        Border.Visible = true
-        Glow.Visible = true
-        borderTween:Play()
-        glowTween:Play()
-        
-        Tween(Main, {0.2, "Quad", "Out"}, {Size = UDim2.new(0, 572, 0, 353)})
-        OpenImage.Image = shownImage
-    end
-    isVisible = not isVisible
-end)
     UIG.Parent = Open
     local window = {}
     
@@ -616,52 +556,82 @@ end)
         Tab.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         Tab.BackgroundTransparency = 1.000
         Tab.Size = UDim2.new(1, 0, 1, 0)
-        Tab.ScrollBarThickness = 2
+        Tab.ScrollBarThickness = 3
+        Tab.ScrollBarImageColor3 = AccentColor
         Tab.Visible = false
+        Tab.ZIndex = 4
 
         TabIco.Name = "TabIco"
         TabIco.Parent = TabBtns
         TabIco.BackgroundTransparency = 1.000
         TabIco.BorderSizePixel = 0
-        TabIco.Size = UDim2.new(0, 24, 0, 24)
+        TabIco.Size = UDim2.new(0, 28, 0, 28)
         TabIco.Image = ("rbxassetid://%s"):format((icon or 4370341699))
         TabIco.ImageTransparency = 0.2
+        TabIco.ZIndex = 5
 
         TabText.Name = "TabText"
         TabText.Parent = TabIco
         TabText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         TabText.BackgroundTransparency = 1.000
-        TabText.Position = UDim2.new(1.41666663, 0, 0, 0)
-        TabText.Size = UDim2.new(0, 76, 0, 24)
+        TabText.Position = UDim2.new(1.5, 0, 0, 0)
+        TabText.Size = UDim2.new(0, 80, 0, 28)
         TabText.Font = Enum.Font.GothamSemibold
         TabText.Text = name
-        TabText.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TabText.TextColor3 = TextColor
         TabText.TextSize = 14.000
         TabText.TextXAlignment = Enum.TextXAlignment.Left
         TabText.TextTransparency = 0.2
+        TabText.ZIndex = 5
 
         TabBtn.Name = "TabBtn"
         TabBtn.Parent = TabIco
         TabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         TabBtn.BackgroundTransparency = 1.000
         TabBtn.BorderSizePixel = 0
-        TabBtn.Size = UDim2.new(0, 110, 0, 24)
+        TabBtn.Size = UDim2.new(0, 120, 0, 28)
         TabBtn.AutoButtonColor = false
         TabBtn.Font = Enum.Font.SourceSans
         TabBtn.Text = ""
         TabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         TabBtn.TextSize = 14.000
+        TabBtn.ZIndex = 6
 
         TabL.Name = "TabL"
         TabL.Parent = Tab
         TabL.SortOrder = Enum.SortOrder.LayoutOrder
-        TabL.Padding = UDim.new(0, 4)
+        TabL.Padding = UDim.new(0, 6)
+
+        -- 标签按钮悬停效果
+        TabBtn.MouseEnter:Connect(function()
+            Tween(TabIco, {0.2, "Quad", "Out"}, {
+                ImageTransparency = 0,
+                Size = UDim2.new(0, 30, 0, 30)
+            })
+            Tween(TabText, {0.2, "Quad", "Out"}, {
+                TextTransparency = 0,
+                TextColor3 = AccentColor
+            })
+        end)
+
+        TabBtn.MouseLeave:Connect(function()
+            if library.currentTab and library.currentTab[1] ~= TabIco then
+                Tween(TabIco, {0.2, "Quad", "Out"}, {
+                    ImageTransparency = 0.2,
+                    Size = UDim2.new(0, 28, 0, 28)
+                })
+                Tween(TabText, {0.2, "Quad", "Out"}, {
+                    TextTransparency = 0.2,
+                    TextColor3 = TextColor
+                })
+            end
+        end)
 
         TabBtn.MouseButton1Click:Connect(
             function()
                 spawn(
                     function()
-                        Ripple(TabBtn)
+                        Ripple(TabBtn, AccentColor)
                     end
                 )
                 switchTab({TabIco, Tab})
@@ -674,7 +644,7 @@ end)
 
         TabL:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(
             function()
-                Tab.CanvasSize = UDim2.new(0, 0, 0, TabL.AbsoluteContentSize.Y + 8)
+                Tab.CanvasSize = UDim2.new(0, 0, 0, TabL.AbsoluteContentSize.Y + 12)
             end
         )
 
@@ -695,7 +665,8 @@ end)
             Section.BackgroundTransparency = Transparency
             Section.BorderSizePixel = 0
             Section.ClipsDescendants = true
-            Section.Size = UDim2.new(0.981000006, 0, 0, 36)
+            Section.Size = UDim2.new(0.98, 0, 0, 40)
+            Section.ZIndex = 5
 
             SectionC.CornerRadius = UDim.new(0, 8)
             SectionC.Name = "SectionC"
@@ -705,22 +676,24 @@ end)
             SectionText.Parent = Section
             SectionText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             SectionText.BackgroundTransparency = 1.000
-            SectionText.Position = UDim2.new(0.0887396261, 0, 0, 0)
-            SectionText.Size = UDim2.new(0, 401, 0, 36)
-            SectionText.Font = Enum.Font.GothamSemibold
+            SectionText.Position = UDim2.new(0.1, 0, 0, 0)
+            SectionText.Size = UDim2.new(0, 401, 0, 40)
+            SectionText.Font = Enum.Font.GothamBold
             SectionText.Text = name
-            SectionText.TextColor3 = Color3.fromRGB(255, 255, 255)
+            SectionText.TextColor3 = TextColor
             SectionText.TextSize = 16.000
             SectionText.TextXAlignment = Enum.TextXAlignment.Left
+            SectionText.ZIndex = 6
 
             SectionOpen.Name = "SectionOpen"
             SectionOpen.Parent = SectionText
             SectionOpen.BackgroundTransparency = 1
             SectionOpen.BorderSizePixel = 0
-            SectionOpen.Position = UDim2.new(0, -33, 0, 5)
+            SectionOpen.Position = UDim2.new(0, -35, 0, 7)
             SectionOpen.Size = UDim2.new(0, 26, 0, 26)
             SectionOpen.Image = "http://www.roblox.com/asset/?id=6031302934"
             SectionOpen.ImageColor3 = AccentColor
+            SectionOpen.ZIndex = 7
 
             SectionOpened.Name = "SectionOpened"
             SectionOpened.Parent = SectionOpen
@@ -730,20 +703,23 @@ end)
             SectionOpened.Image = "http://www.roblox.com/asset/?id=6031302932"
             SectionOpened.ImageTransparency = 1.000
             SectionOpened.ImageColor3 = AccentColor
+            SectionOpened.ZIndex = 7
 
             SectionToggle.Name = "SectionToggle"
             SectionToggle.Parent = SectionOpen
             SectionToggle.BackgroundTransparency = 1
             SectionToggle.BorderSizePixel = 0
             SectionToggle.Size = UDim2.new(0, 26, 0, 26)
+            SectionToggle.ZIndex = 8
 
             Objs.Name = "Objs"
             Objs.Parent = Section
             Objs.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             Objs.BackgroundTransparency = 1
             Objs.BorderSizePixel = 0
-            Objs.Position = UDim2.new(0, 6, 0, 36)
-            Objs.Size = UDim2.new(0.986347735, 0, 0, 0)
+            Objs.Position = UDim2.new(0, 8, 0, 40)
+            Objs.Size = UDim2.new(0.98, 0, 0, 0)
+            Objs.ZIndex = 5
 
             ObjsL.Name = "ObjsL"
             ObjsL.Parent = Objs
@@ -752,17 +728,36 @@ end)
 
             local open = TabVal
             if TabVal ~= false then
-                Section.Size = UDim2.new(0.981000006, 0, 0, open and 36 + ObjsL.AbsoluteContentSize.Y + 8 or 36)
+                Section.Size = UDim2.new(0.98, 0, 0, open and 40 + ObjsL.AbsoluteContentSize.Y + 8 or 40)
                 SectionOpened.ImageTransparency = (open and 0 or 1)
                 SectionOpen.ImageTransparency = (open and 1 or 0)
             end
 
+            -- 添加悬停效果
+            Section.MouseEnter:Connect(function()
+                Tween(Section, {0.2, "Quad", "Out"}, {
+                    BackgroundTransparency = HoverTransparency
+                })
+            end)
+
+            Section.MouseLeave:Connect(function()
+                Tween(Section, {0.2, "Quad", "Out"}, {
+                    BackgroundTransparency = Transparency
+                })
+            end)
+
             SectionToggle.MouseButton1Click:Connect(
                 function()
                     open = not open
-                    Section.Size = UDim2.new(0.981000006, 0, 0, open and 36 + ObjsL.AbsoluteContentSize.Y + 8 or 36)
-                    SectionOpened.ImageTransparency = (open and 0 or 1)
-                    SectionOpen.ImageTransparency = (open and 1 or 0)
+                    Tween(Section, {0.2, "Quad", "Out"}, {
+                        Size = UDim2.new(0.98, 0, 0, open and 40 + ObjsL.AbsoluteContentSize.Y + 8 or 40)
+                    })
+                    Tween(SectionOpened, {0.2, "Quad", "Out"}, {
+                        ImageTransparency = (open and 0 or 1)
+                    })
+                    Tween(SectionOpen, {0.2, "Quad", "Out"}, {
+                        ImageTransparency = (open and 1 or 0)
+                    })
                 end
             )
 
@@ -771,7 +766,7 @@ end)
                     if not open then
                         return
                     end
-                    Section.Size = UDim2.new(0.981000006, 0, 0, 36 + ObjsL.AbsoluteContentSize.Y + 8)
+                    Section.Size = UDim2.new(0.98, 0, 0, 40 + ObjsL.AbsoluteContentSize.Y + 8)
                 end
             )
 
@@ -790,55 +785,61 @@ end)
                 BtnModule.BackgroundTransparency = 1.000
                 BtnModule.BorderSizePixel = 0
                 BtnModule.Position = UDim2.new(0, 0, 0, 0)
-                BtnModule.Size = UDim2.new(0, 428, 0, 38)
+                BtnModule.Size = UDim2.new(0, 428, 0, 40)
+                BtnModule.ZIndex = 6
 
                 Btn.Name = "Btn"
                 Btn.Parent = BtnModule
                 Btn.BackgroundColor3 = zyColor
                 Btn.BackgroundTransparency = Transparency
                 Btn.BorderSizePixel = 0
-                Btn.Size = UDim2.new(0, 428, 0, 38)
+                Btn.Size = UDim2.new(0, 428, 0, 40)
                 Btn.AutoButtonColor = false
                 Btn.Font = Enum.Font.GothamSemibold
                 Btn.Text = "   " .. text
-                Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                Btn.TextColor3 = TextColor
                 Btn.TextSize = 16.000
                 Btn.TextXAlignment = Enum.TextXAlignment.Left
+                Btn.ZIndex = 7
 
                 BtnC.CornerRadius = UDim.new(0, 8)
                 BtnC.Name = "BtnC"
                 BtnC.Parent = Btn
 
-                -- 按钮悬停效果 - 更流畅的动画
+                -- 按钮悬停效果
                 Btn.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        Btn,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = HoverTransparency,
-                            TextColor3 = AccentColor,
-                            Size = UDim2.new(0, 428, 0, 42)
-                        }
-                    ):Play()
+                    Tween(Btn, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency,
+                        TextColor3 = AccentColor
+                    })
                 end)
 
                 Btn.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        Btn,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = Transparency,
-                            TextColor3 = Color3.fromRGB(255, 255, 255),
-                            Size = UDim2.new(0, 428, 0, 38)
-                        }
-                    ):Play()
+                    Tween(Btn, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency,
+                        TextColor3 = TextColor
+                    })
+                end)
+
+                Btn.MouseButton1Down:Connect(function()
+                    Tween(Btn, {0.1, "Quad", "Out"}, {
+                        BackgroundTransparency = ActiveTransparency,
+                        Size = UDim2.new(0, 428, 0, 38)
+                    })
+                end)
+
+                Btn.MouseButton1Up:Connect(function()
+                    Tween(Btn, {0.2, "Elastic", "Out"}, {
+                        BackgroundTransparency = HoverTransparency,
+                        Size = UDim2.new(0, 428, 0, 40)
+                    })
                 end)
 
                 Btn.MouseButton1Click:Connect(
                     function()
                         spawn(
                             function()
-                                Ripple(Btn)
+                                Ripple(Btn, AccentColor)
                             end
                         )
                         spawn(callback)
@@ -857,7 +858,8 @@ end)
                 LabelModule.BackgroundTransparency = 1.000
                 LabelModule.BorderSizePixel = 0
                 LabelModule.Position = UDim2.new(0, 0, NAN, 0)
-                LabelModule.Size = UDim2.new(0, 428, 0, 19)
+                LabelModule.Size = UDim2.new(0, 428, 0, 22)
+                LabelModule.ZIndex = 6
 
                 TextLabel.Parent = LabelModule
                 TextLabel.BackgroundColor3 = zyColor
@@ -865,23 +867,18 @@ end)
                 TextLabel.Size = UDim2.new(0, 428, 0, 22)
                 TextLabel.Font = Enum.Font.GothamSemibold
                 TextLabel.Text = text
-                TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                TextLabel.TextColor3 = SecondaryTextColor
                 TextLabel.TextSize = 14.000
+                TextLabel.ZIndex = 7
 
                 LabelC.CornerRadius = UDim.new(0, 6)
                 LabelC.Name = "LabelC"
                 LabelC.Parent = TextLabel
-                
-                -- 标签动画
-                spawn(function()
-                    while TextLabel.Parent do
-                        Tween(TextLabel, {1, "Sine", "InOut"}, {TextColor3 = Color3.fromRGB(255, 255, 255)})
-                        wait(1)
-                        Tween(TextLabel, {1, "Sine", "InOut"}, {TextColor3 = AccentColor})
-                        wait(1)
-                    end
-                end)
-                
+
+                -- 添加渐显动画
+                TextLabel.TextTransparency = 1
+                Tween(TextLabel, {0.3, "Quad", "Out"}, {TextTransparency = 0})
+
                 return TextLabel
             end
 
@@ -907,20 +904,22 @@ end)
                 ToggleModule.BackgroundTransparency = 1.000
                 ToggleModule.BorderSizePixel = 0
                 ToggleModule.Position = UDim2.new(0, 0, 0, 0)
-                ToggleModule.Size = UDim2.new(0, 428, 0, 38)
+                ToggleModule.Size = UDim2.new(0, 428, 0, 40)
+                ToggleModule.ZIndex = 6
 
                 ToggleBtn.Name = "ToggleBtn"
                 ToggleBtn.Parent = ToggleModule
                 ToggleBtn.BackgroundColor3 = zyColor
                 ToggleBtn.BackgroundTransparency = Transparency
                 ToggleBtn.BorderSizePixel = 0
-                ToggleBtn.Size = UDim2.new(0, 428, 0, 38)
+                ToggleBtn.Size = UDim2.new(0, 428, 0, 40)
                 ToggleBtn.AutoButtonColor = false
                 ToggleBtn.Font = Enum.Font.GothamSemibold
                 ToggleBtn.Text = "   " .. text
-                ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                ToggleBtn.TextColor3 = TextColor
                 ToggleBtn.TextSize = 16.000
                 ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+                ToggleBtn.ZIndex = 7
 
                 ToggleBtnC.CornerRadius = UDim.new(0, 8)
                 ToggleBtnC.Name = "ToggleBtnC"
@@ -931,13 +930,15 @@ end)
                 ToggleDisable.BackgroundColor3 = Background
                 ToggleDisable.BackgroundTransparency = Transparency
                 ToggleDisable.BorderSizePixel = 0
-                ToggleDisable.Position = UDim2.new(0.901869178, 0, 0.208881587, 0)
-                ToggleDisable.Size = UDim2.new(0, 36, 0, 22)
+                ToggleDisable.Position = UDim2.new(0.85, 0, 0.2, 0)
+                ToggleDisable.Size = UDim2.new(0, 40, 0, 24)
+                ToggleDisable.ZIndex = 8
 
                 ToggleSwitch.Name = "ToggleSwitch"
                 ToggleSwitch.Parent = ToggleDisable
                 ToggleSwitch.BackgroundColor3 = beijingColor
-                ToggleSwitch.Size = UDim2.new(0, 24, 0, 22)
+                ToggleSwitch.Size = UDim2.new(0, 20, 0, 24)
+                ToggleSwitch.ZIndex = 9
 
                 ToggleSwitchC.CornerRadius = UDim.new(0, 6)
                 ToggleSwitchC.Name = "ToggleSwitchC"
@@ -959,7 +960,7 @@ end)
                             ToggleSwitch,
                             TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                             {
-                                Position = UDim2.new(0, (state and ToggleSwitch.Size.X.Offset / 2 or 0), 0, 0),
+                                Position = UDim2.new(0, (state and ToggleDisable.AbsoluteSize.X - ToggleSwitch.AbsoluteSize.X or 0), 0, 0),
                                 BackgroundColor3 = (state and AccentColor or beijingColor)
                             }
                         ):Play()
@@ -973,29 +974,31 @@ end)
                     funcs:SetState(flag, true)
                 end
 
-                -- 悬停效果 - 更流畅的动画
+                -- 悬停效果
                 ToggleBtn.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        ToggleBtn,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = HoverTransparency,
-                            TextColor3 = AccentColor,
-                            Size = UDim2.new(0, 428, 0, 42)
-                        }
-                    ):Play()
+                    Tween(ToggleBtn, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency,
+                        TextColor3 = AccentColor
+                    })
                 end)
 
                 ToggleBtn.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        ToggleBtn,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = Transparency,
-                            TextColor3 = Color3.fromRGB(255, 255, 255),
-                            Size = UDim2.new(0, 428, 0, 38)
-                        }
-                    ):Play()
+                    Tween(ToggleBtn, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency,
+                        TextColor3 = TextColor
+                    })
+                end)
+
+                ToggleDisable.MouseEnter:Connect(function()
+                    Tween(ToggleDisable, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency
+                    })
+                end)
+
+                ToggleDisable.MouseLeave:Connect(function()
+                    Tween(ToggleDisable, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency
+                    })
                 end)
 
                 ToggleBtn.MouseButton1Click:Connect(
@@ -1053,20 +1056,22 @@ end)
                 KeybindModule.BackgroundTransparency = 1.000
                 KeybindModule.BorderSizePixel = 0
                 KeybindModule.Position = UDim2.new(0, 0, 0, 0)
-                KeybindModule.Size = UDim2.new(0, 428, 0, 38)
+                KeybindModule.Size = UDim2.new(0, 428, 0, 40)
+                KeybindModule.ZIndex = 6
 
                 KeybindBtn.Name = "KeybindBtn"
                 KeybindBtn.Parent = KeybindModule
                 KeybindBtn.BackgroundColor3 = zyColor
                 KeybindBtn.BackgroundTransparency = Transparency
                 KeybindBtn.BorderSizePixel = 0
-                KeybindBtn.Size = UDim2.new(0, 428, 0, 38)
+                KeybindBtn.Size = UDim2.new(0, 428, 0, 40)
                 KeybindBtn.AutoButtonColor = false
                 KeybindBtn.Font = Enum.Font.GothamSemibold
                 KeybindBtn.Text = "   " .. text
-                KeybindBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                KeybindBtn.TextColor3 = TextColor
                 KeybindBtn.TextSize = 16.000
                 KeybindBtn.TextXAlignment = Enum.TextXAlignment.Left
+                KeybindBtn.ZIndex = 7
 
                 KeybindBtnC.CornerRadius = UDim.new(0, 8)
                 KeybindBtnC.Name = "KeybindBtnC"
@@ -1077,13 +1082,14 @@ end)
                 KeybindValue.BackgroundColor3 = Background
                 KeybindValue.BackgroundTransparency = Transparency
                 KeybindValue.BorderSizePixel = 0
-                KeybindValue.Position = UDim2.new(0.763033211, 0, 0.289473683, 0)
+                KeybindValue.Position = UDim2.new(0.75, 0, 0.2, 0)
                 KeybindValue.Size = UDim2.new(0, 100, 0, 28)
                 KeybindValue.AutoButtonColor = false
                 KeybindValue.Font = Enum.Font.Gotham
                 KeybindValue.Text = keyTxt
-                KeybindValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+                KeybindValue.TextColor3 = TextColor
                 KeybindValue.TextSize = 14.000
+                KeybindValue.ZIndex = 8
 
                 KeybindValueC.CornerRadius = UDim.new(0, 6)
                 KeybindValueC.Name = "KeybindValueC"
@@ -1098,53 +1104,33 @@ end)
                 UIPadding.Parent = KeybindBtn
                 UIPadding.PaddingRight = UDim.new(0, 6)
 
-                -- 悬停效果 - 更流畅的动画
+                -- 悬停效果
                 KeybindBtn.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        KeybindBtn,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = HoverTransparency,
-                            TextColor3 = AccentColor,
-                            Size = UDim2.new(0, 428, 0, 42)
-                        }
-                    ):Play()
+                    Tween(KeybindBtn, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency,
+                        TextColor3 = AccentColor
+                    })
                 end)
 
                 KeybindBtn.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        KeybindBtn,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = Transparency,
-                            TextColor3 = Color3.fromRGB(255, 255, 255),
-                            Size = UDim2.new(0, 428, 0, 38)
-                        }
-                    ):Play()
+                    Tween(KeybindBtn, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency,
+                        TextColor3 = TextColor
+                    })
                 end)
 
                 KeybindValue.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        KeybindValue,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = HoverTransparency,
-                            TextColor3 = AccentColor,
-                            Size = UDim2.new(0, 110, 0, 32)
-                        }
-                    ):Play()
+                    Tween(KeybindValue, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency,
+                        TextColor3 = AccentColor
+                    })
                 end)
 
                 KeybindValue.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        KeybindValue,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = Transparency,
-                            TextColor3 = Color3.fromRGB(255, 255, 255),
-                            Size = UDim2.new(0, 100, 0, 28)
-                        }
-                    ):Play()
+                    Tween(KeybindValue, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency,
+                        TextColor3 = TextColor
+                    })
                 end)
 
                 services.UserInputService.InputBegan:Connect(
@@ -1165,20 +1151,36 @@ end)
                 KeybindValue.MouseButton1Click:Connect(
                     function()
                         KeybindValue.Text = "..."
+                        Tween(KeybindValue, {0.2, "Quad", "Out"}, {
+                            BackgroundColor3 = AccentColor,
+                            TextColor3 = Color3.fromRGB(255, 255, 255)
+                        })
                         wait()
                         local key, uwu = services.UserInputService.InputEnded:Wait()
                         local keyName = tostring(key.KeyCode.Name)
                         if key.UserInputType ~= Enum.UserInputType.Keyboard then
                             KeybindValue.Text = keyTxt
+                            Tween(KeybindValue, {0.2, "Quad", "Out"}, {
+                                BackgroundColor3 = Background,
+                                TextColor3 = TextColor
+                            })
                             return
                         end
                         if banned[keyName] then
                             KeybindValue.Text = keyTxt
+                            Tween(KeybindValue, {0.2, "Quad", "Out"}, {
+                                BackgroundColor3 = Background,
+                                TextColor3 = TextColor
+                            })
                             return
                         end
                         wait()
                         bindKey = Enum.KeyCode[keyName]
                         KeybindValue.Text = shortNames[keyName] or keyName
+                        Tween(KeybindValue, {0.2, "Quad", "Out"}, {
+                            BackgroundColor3 = Background,
+                            TextColor3 = TextColor
+                        })
                     end
                 )
 
@@ -1213,20 +1215,22 @@ end)
                 TextboxModule.BackgroundTransparency = 1.000
                 TextboxModule.BorderSizePixel = 0
                 TextboxModule.Position = UDim2.new(0, 0, 0, 0)
-                TextboxModule.Size = UDim2.new(0, 428, 0, 38)
+                TextboxModule.Size = UDim2.new(0, 428, 0, 40)
+                TextboxModule.ZIndex = 6
 
                 TextboxBack.Name = "TextboxBack"
                 TextboxBack.Parent = TextboxModule
                 TextboxBack.BackgroundColor3 = zyColor
                 TextboxBack.BackgroundTransparency = Transparency
                 TextboxBack.BorderSizePixel = 0
-                TextboxBack.Size = UDim2.new(0, 428, 0, 38)
+                TextboxBack.Size = UDim2.new(0, 428, 0, 40)
                 TextboxBack.AutoButtonColor = false
                 TextboxBack.Font = Enum.Font.GothamSemibold
                 TextboxBack.Text = "   " .. text
-                TextboxBack.TextColor3 = Color3.fromRGB(255, 255, 255)
+                TextboxBack.TextColor3 = TextColor
                 TextboxBack.TextSize = 16.000
                 TextboxBack.TextXAlignment = Enum.TextXAlignment.Left
+                TextboxBack.ZIndex = 7
 
                 TextboxBackC.CornerRadius = UDim.new(0, 6)
                 TextboxBackC.Name = "TextboxBackC"
@@ -1237,13 +1241,14 @@ end)
                 BoxBG.BackgroundColor3 = Background
                 BoxBG.BackgroundTransparency = Transparency
                 BoxBG.BorderSizePixel = 0
-                BoxBG.Position = UDim2.new(0.763033211, 0, 0.289473683, 0)
+                BoxBG.Position = UDim2.new(0.75, 0, 0.2, 0)
                 BoxBG.Size = UDim2.new(0, 100, 0, 28)
                 BoxBG.AutoButtonColor = false
                 BoxBG.Font = Enum.Font.Gotham
                 BoxBG.Text = ""
-                BoxBG.TextColor3 = Color3.fromRGB(255, 255, 255)
+                BoxBG.TextColor3 = TextColor
                 BoxBG.TextSize = 14.000
+                BoxBG.ZIndex = 8
 
                 BoxBGC.CornerRadius = UDim.new(0, 6)
                 BoxBGC.Name = "BoxBGC"
@@ -1256,8 +1261,9 @@ end)
                 TextBox.Size = UDim2.new(1, 0, 1, 0)
                 TextBox.Font = Enum.Font.Gotham
                 TextBox.Text = default
-                TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+                TextBox.TextColor3 = TextColor
                 TextBox.TextSize = 14.000
+                TextBox.ZIndex = 9
 
                 TextboxBackL.Name = "TextboxBackL"
                 TextboxBackL.Parent = TextboxBack
@@ -1269,57 +1275,54 @@ end)
                 TextboxBackP.Parent = TextboxBack
                 TextboxBackP.PaddingRight = UDim.new(0, 6)
 
-                -- 悬停效果 - 更流畅的动画
+                -- 悬停效果
                 TextboxBack.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        TextboxBack,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = HoverTransparency,
-                            TextColor3 = AccentColor,
-                            Size = UDim2.new(0, 428, 0, 42)
-                        }
-                    ):Play()
+                    Tween(TextboxBack, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency,
+                        TextColor3 = AccentColor
+                    })
                 end)
 
                 TextboxBack.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        TextboxBack,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = Transparency,
-                            TextColor3 = Color3.fromRGB(255, 255, 255),
-                            Size = UDim2.new(0, 428, 0, 38)
-                        }
-                    ):Play()
+                    Tween(TextboxBack, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency,
+                        TextColor3 = TextColor
+                    })
                 end)
 
                 BoxBG.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        BoxBG,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = HoverTransparency,
-                            Size = UDim2.new(0, 110, 0, 32)
-                        }
-                    ):Play()
+                    Tween(BoxBG, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency
+                    })
                 end)
 
                 BoxBG.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        BoxBG,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = Transparency,
-                            Size = UDim2.new(0, 100, 0, 28)
-                        }
-                    ):Play()
+                    Tween(BoxBG, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency
+                    })
+                end)
+
+                TextBox.Focused:Connect(function()
+                    Tween(BoxBG, {0.2, "Quad", "Out"}, {
+                        BackgroundColor3 = AccentColor,
+                        BackgroundTransparency = 0.5
+                    })
+                    Tween(TextBox, {0.2, "Quad", "Out"}, {
+                        TextColor3 = Color3.fromRGB(255, 255, 255)
+                    })
                 end)
 
                 TextBox.FocusLost:Connect(function()
                     if TextBox.Text == "" then
                       TextBox.Text = default
                     end
+                    Tween(BoxBG, {0.2, "Quad", "Out"}, {
+                        BackgroundColor3 = Background,
+                        BackgroundTransparency = Transparency
+                    })
+                    Tween(TextBox, {0.2, "Quad", "Out"}, {
+                        TextColor3 = TextColor
+                    })
                     library.flags[flag] = TextBox.Text
                     callback(TextBox.Text)
                   end)
@@ -1362,20 +1365,22 @@ end)
                 SliderModule.BackgroundTransparency = 1.000
                 SliderModule.BorderSizePixel = 0
                 SliderModule.Position = UDim2.new(0, 0, 0, 0)
-                SliderModule.Size = UDim2.new(0, 428, 0, 38)
+                SliderModule.Size = UDim2.new(0, 428, 0, 40)
+                SliderModule.ZIndex = 6
 
                 SliderBack.Name = "SliderBack"
                 SliderBack.Parent = SliderModule
                 SliderBack.BackgroundColor3 = zyColor
                 SliderBack.BackgroundTransparency = Transparency
                 SliderBack.BorderSizePixel = 0
-                SliderBack.Size = UDim2.new(0, 428, 0, 38)
+                SliderBack.Size = UDim2.new(0, 428, 0, 40)
                 SliderBack.AutoButtonColor = false
                 SliderBack.Font = Enum.Font.GothamSemibold
                 SliderBack.Text = "   " .. text
-                SliderBack.TextColor3 = Color3.fromRGB(255, 255, 255)
+                SliderBack.TextColor3 = TextColor
                 SliderBack.TextSize = 16.000
                 SliderBack.TextXAlignment = Enum.TextXAlignment.Left
+                SliderBack.ZIndex = 7
 
                 SliderBackC.CornerRadius = UDim.new(0, 6)
                 SliderBackC.Name = "SliderBackC"
@@ -1387,8 +1392,9 @@ end)
                 SliderBar.BackgroundColor3 = Background
                 SliderBar.BackgroundTransparency = Transparency
                 SliderBar.BorderSizePixel = 0
-                SliderBar.Position = UDim2.new(0.369000018, 40, 0.5, 0)
+                SliderBar.Position = UDim2.new(0.4, 40, 0.5, 0)
                 SliderBar.Size = UDim2.new(0, 140, 0, 12)
+                SliderBar.ZIndex = 8
 
                 SliderBarC.CornerRadius = UDim.new(0, 4)
                 SliderBarC.Name = "SliderBarC"
@@ -1398,7 +1404,8 @@ end)
                 SliderPart.Parent = SliderBar
                 SliderPart.BackgroundColor3 = AccentColor
                 SliderPart.BorderSizePixel = 0
-                SliderPart.Size = UDim2.new(0, 54, 0, 13)
+                SliderPart.Size = UDim2.new(0, 54, 0, 12)
+                SliderPart.ZIndex = 9
 
                 SliderPartC.CornerRadius = UDim.new(0, 4)
                 SliderPartC.Name = "SliderPartC"
@@ -1409,13 +1416,14 @@ end)
                 SliderValBG.BackgroundColor3 = Background
                 SliderValBG.BackgroundTransparency = Transparency
                 SliderValBG.BorderSizePixel = 0
-                SliderValBG.Position = UDim2.new(0.883177578, 0, 0.131578952, 0)
+                SliderValBG.Position = UDim2.new(0.85, 0, 0.2, 0)
                 SliderValBG.Size = UDim2.new(0, 44, 0, 28)
                 SliderValBG.AutoButtonColor = false
                 SliderValBG.Font = Enum.Font.Gotham
                 SliderValBG.Text = ""
-                SliderValBG.TextColor3 = Color3.fromRGB(255, 255, 255)
+                SliderValBG.TextColor3 = TextColor
                 SliderValBG.TextSize = 14.000
+                SliderValBG.ZIndex = 8
 
                 SliderValBGC.CornerRadius = UDim.new(0, 6)
                 SliderValBGC.Name = "SliderValBGC"
@@ -1429,21 +1437,23 @@ end)
                 SliderValue.Size = UDim2.new(1, 0, 1, 0)
                 SliderValue.Font = Enum.Font.Gotham
                 SliderValue.Text = "1000"
-                SliderValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+                SliderValue.TextColor3 = TextColor
                 SliderValue.TextSize = 14.000
+                SliderValue.ZIndex = 9
 
                 MinSlider.Name = "MinSlider"
                 MinSlider.Parent = SliderModule
                 MinSlider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 MinSlider.BackgroundTransparency = 1.000
                 MinSlider.BorderSizePixel = 0
-                MinSlider.Position = UDim2.new(0.296728969, 40, 0.236842096, 0)
+                MinSlider.Position = UDim2.new(0.35, 40, 0.2, 0)
                 MinSlider.Size = UDim2.new(0, 20, 0, 20)
                 MinSlider.Font = Enum.Font.Gotham
                 MinSlider.Text = "-"
-                MinSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
+                MinSlider.TextColor3 = TextColor
                 MinSlider.TextSize = 24.000
                 MinSlider.TextWrapped = true
+                MinSlider.ZIndex = 8
 
                 AddSlider.Name = "AddSlider"
                 AddSlider.Parent = SliderModule
@@ -1451,59 +1461,64 @@ end)
                 AddSlider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 AddSlider.BackgroundTransparency = 1.000
                 AddSlider.BorderSizePixel = 0
-                AddSlider.Position = UDim2.new(0.810906529, 0, 0.5, 0)
+                AddSlider.Position = UDim2.new(0.8, 0, 0.5, 0)
                 AddSlider.Size = UDim2.new(0, 20, 0, 20)
                 AddSlider.Font = Enum.Font.Gotham
                 AddSlider.Text = "+"
-                AddSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
+                AddSlider.TextColor3 = TextColor
                 AddSlider.TextSize = 24.000
                 AddSlider.TextWrapped = true
+                AddSlider.ZIndex = 8
 
-                -- 悬停效果 - 更流畅的动画
+                -- 悬停效果
                 SliderBack.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        SliderBack,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = HoverTransparency,
-                            TextColor3 = AccentColor,
-                            Size = UDim2.new(0, 428, 0, 42)
-                        }
-                    ):Play()
+                    Tween(SliderBack, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency,
+                        TextColor3 = AccentColor
+                    })
                 end)
 
                 SliderBack.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        SliderBack,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = Transparency,
-                            TextColor3 = Color3.fromRGB(255, 255, 255),
-                            Size = UDim2.new(0, 428, 0, 38)
-                        }
-                    ):Play()
+                    Tween(SliderBack, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency,
+                        TextColor3 = TextColor
+                    })
                 end)
 
                 SliderValBG.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        SliderValBG,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = HoverTransparency,
-                            Size = UDim2.new(0, 54, 0, 32)
-                        }
-                    ):Play()
+                    Tween(SliderValBG, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency
+                    })
                 end)
 
                 SliderValBG.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        SliderValBG,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = Transparency,
-                            Size = UDim2.new(0, 44, 0, 28)
-                        }
-                    ):Play()
+                    Tween(SliderValBG, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency
+                    })
+                end)
+
+                MinSlider.MouseEnter:Connect(function()
+                    Tween(MinSlider, {0.2, "Quad", "Out"}, {
+                        TextColor3 = AccentColor
+                    })
+                end)
+
+                MinSlider.MouseLeave:Connect(function()
+                    Tween(MinSlider, {0.2, "Quad", "Out"}, {
+                        TextColor3 = TextColor
+                    })
+                end)
+
+                AddSlider.MouseEnter:Connect(function()
+                    Tween(AddSlider, {0.2, "Quad", "Out"}, {
+                        TextColor3 = AccentColor
+                    })
+                end)
+
+                AddSlider.MouseLeave:Connect(function()
+                    Tween(AddSlider, {0.2, "Quad", "Out"}, {
+                        TextColor3 = TextColor
+                    })
                 end)
 
                 local funcs = {
@@ -1520,7 +1535,7 @@ end)
                         end
                         library.flags[flag] = tonumber(value)
                         SliderValue.Text = tostring(value)
-                        SliderPart.Size = UDim2.new(percent, 0, 1, 0)
+                        Tween(SliderPart, {0.1, "Quad", "Out"}, {Size = UDim2.new(percent, 0, 1, 0)})
                         callback(tonumber(value))
                     end
                 }
@@ -1554,8 +1569,9 @@ end)
                 SliderBar.InputBegan:Connect(
                     function(input)
                         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                            funcs:SetValue()
                             dragging = true
+                            Tween(SliderPart, {0.1, "Quad", "Out"}, {Size = UDim2.new(0, SliderPart.AbsoluteSize.X * 1.1, 1, 0)})
+                            funcs:SetValue()
                         end
                     end
                 )
@@ -1564,6 +1580,7 @@ end)
                     function(input)
                         if dragging and input.UserInputType == Enum.UserInputType.MouseButton1 then
                             dragging = false
+                            Tween(SliderPart, {0.2, "Elastic", "Out"}, {Size = UDim2.new(SliderPart.Size.X.Scale, 0, 1, 0)})
                         end
                     end
                 )
@@ -1576,40 +1593,29 @@ end)
                     end
                 )
 
-                SliderBar.InputBegan:Connect(
-                    function(input)
-                        if input.UserInputType == Enum.UserInputType.Touch then
-                            funcs:SetValue()
-                            dragging = true
-                        end
-                    end
-                )
-
-                services.UserInputService.InputEnded:Connect(
-                    function(input)
-                        if dragging and input.UserInputType == Enum.UserInputType.Touch then
-                            dragging = false
-                        end
-                    end
-                )
-
-                services.UserInputService.InputChanged:Connect(
-                    function(input)
-                        if dragging and input.UserInputType == Enum.UserInputType.Touch then
-                            funcs:SetValue()
-                        end
-                    end
-                )
-
                 SliderValue.Focused:Connect(
                     function()
                         boxFocused = true
+                        Tween(SliderValBG, {0.2, "Quad", "Out"}, {
+                            BackgroundColor3 = AccentColor,
+                            BackgroundTransparency = 0.5
+                        })
+                        Tween(SliderValue, {0.2, "Quad", "Out"}, {
+                            TextColor3 = Color3.fromRGB(255, 255, 255)
+                        })
                     end
                 )
 
                 SliderValue.FocusLost:Connect(
                     function()
                         boxFocused = false
+                        Tween(SliderValBG, {0.2, "Quad", "Out"}, {
+                            BackgroundColor3 = Background,
+                            BackgroundTransparency = Transparency
+                        })
+                        Tween(SliderValue, {0.2, "Quad", "Out"}, {
+                            TextColor3 = TextColor
+                        })
                         if SliderValue.Text == "" then
                             funcs:SetValue(default)
                         end
@@ -1639,6 +1645,7 @@ end)
 
                 return funcs
             end
+
             function section.Dropdown(section, text, flag, options, callback)
                 local callback = callback or function() end
                 local options = options or {}
@@ -1663,20 +1670,22 @@ end)
                 DropdownModule.BorderSizePixel = 0
                 DropdownModule.ClipsDescendants = true
                 DropdownModule.Position = UDim2.new(0, 0, 0, 0)
-                DropdownModule.Size = UDim2.new(0, 428, 0, 38)
+                DropdownModule.Size = UDim2.new(0, 428, 0, 40)
+                DropdownModule.ZIndex = 6
 
                 DropdownTop.Name = "DropdownTop"
                 DropdownTop.Parent = DropdownModule
                 DropdownTop.BackgroundColor3 = zyColor
                 DropdownTop.BackgroundTransparency = Transparency
                 DropdownTop.BorderSizePixel = 0
-                DropdownTop.Size = UDim2.new(0, 428, 0, 38)
+                DropdownTop.Size = UDim2.new(0, 428, 0, 40)
                 DropdownTop.AutoButtonColor = false
                 DropdownTop.Font = Enum.Font.GothamSemibold
                 DropdownTop.Text = ""
-                DropdownTop.TextColor3 = Color3.fromRGB(255, 255, 255)
+                DropdownTop.TextColor3 = TextColor
                 DropdownTop.TextSize = 16.000
                 DropdownTop.TextXAlignment = Enum.TextXAlignment.Left
+                DropdownTop.ZIndex = 7
 
                 DropdownTopC.CornerRadius = UDim.new(0, 6)
                 DropdownTopC.Name = "DropdownTopC"
@@ -1688,79 +1697,59 @@ end)
                 DropdownOpen.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 DropdownOpen.BackgroundTransparency = 1.000
                 DropdownOpen.BorderSizePixel = 0
-                DropdownOpen.Position = UDim2.new(0.918383181, 0, 0.5, 0)
+                DropdownOpen.Position = UDim2.new(0.9, 0, 0.5, 0)
                 DropdownOpen.Size = UDim2.new(0, 20, 0, 20)
                 DropdownOpen.Font = Enum.Font.Gotham
                 DropdownOpen.Text = "+"
-                DropdownOpen.TextColor3 = Color3.fromRGB(255, 255, 255)
+                DropdownOpen.TextColor3 = TextColor
                 DropdownOpen.TextSize = 24.000
                 DropdownOpen.TextWrapped = true
+                DropdownOpen.ZIndex = 8
 
                 DropdownText.Name = "DropdownText"
                 DropdownText.Parent = DropdownTop
                 DropdownText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 DropdownText.BackgroundTransparency = 1.000
                 DropdownText.BorderSizePixel = 0
-                DropdownText.Position = UDim2.new(0.0373831764, 0, 0, 0)
-                DropdownText.Size = UDim2.new(0, 184, 0, 38)
+                DropdownText.Position = UDim2.new(0.05, 0, 0, 0)
+                DropdownText.Size = UDim2.new(0, 184, 0, 40)
                 DropdownText.Font = Enum.Font.GothamSemibold
-                DropdownText.PlaceholderColor3 = Color3.fromRGB(255, 255, 255)
+                DropdownText.PlaceholderColor3 = SecondaryTextColor
                 DropdownText.PlaceholderText = text
                 DropdownText.Text = ""
-                DropdownText.TextColor3 = Color3.fromRGB(255, 255, 255)
+                DropdownText.TextColor3 = TextColor
                 DropdownText.TextSize = 16.000
                 DropdownText.TextXAlignment = Enum.TextXAlignment.Left
+                DropdownText.ZIndex = 8
 
                 DropdownModuleL.Name = "DropdownModuleL"
                 DropdownModuleL.Parent = DropdownModule
                 DropdownModuleL.SortOrder = Enum.SortOrder.LayoutOrder
                 DropdownModuleL.Padding = UDim.new(0, 4)
 
-                -- 悬停效果 - 更流畅的动画
+                -- 悬停效果
                 DropdownTop.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        DropdownTop,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = HoverTransparency,
-                            TextColor3 = AccentColor,
-                            Size = UDim2.new(0, 428, 0, 42)
-                        }
-                    ):Play()
+                    Tween(DropdownTop, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = HoverTransparency,
+                    })
                 end)
 
                 DropdownTop.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        DropdownTop,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            BackgroundTransparency = Transparency,
-                            TextColor3 = Color3.fromRGB(255, 255, 255),
-                            Size = UDim2.new(0, 428, 0, 38)
-                        }
-                    ):Play()
+                    Tween(DropdownTop, {0.2, "Quad", "Out"}, {
+                        BackgroundTransparency = Transparency,
+                    })
                 end)
 
                 DropdownOpen.MouseEnter:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        DropdownOpen,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            TextColor3 = AccentColor,
-                            Size = UDim2.new(0, 24, 0, 24)
-                        }
-                    ):Play()
+                    Tween(DropdownOpen, {0.2, "Quad", "Out"}, {
+                        TextColor3 = AccentColor
+                    })
                 end)
 
                 DropdownOpen.MouseLeave:Connect(function()
-                    game:GetService("TweenService"):Create(
-                        DropdownOpen,
-                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {
-                            TextColor3 = Color3.fromRGB(255, 255, 255),
-                            Size = UDim2.new(0, 20, 0, 20)
-                        }
-                    ):Play()
+                    Tween(DropdownOpen, {0.2, "Quad", "Out"}, {
+                        TextColor3 = TextColor
+                    })
                 end)
 
                 local setAllVisible = function()
@@ -1798,11 +1787,15 @@ end)
                         setAllVisible()
                     end
                     DropdownOpen.Text = (open and "-" or "+")
-                    DropdownModule.Size =
-                        UDim2.new(0, 428, 0, (open and DropdownModuleL.AbsoluteContentSize.Y + 4 or 38))
+                    Tween(DropdownModule, {0.2, "Quad", "Out"}, {
+                        Size = UDim2.new(0, 428, 0, (open and DropdownModuleL.AbsoluteContentSize.Y + 4 or 40))
+                    })
                 end
 
-                DropdownOpen.MouseButton1Click:Connect(ToggleDropVis)
+                DropdownOpen.MouseButton1Click:Connect(function()
+                    ToggleDropVis()
+                end)
+                
                 DropdownText.Focused:Connect(
                     function()
                         if open then
@@ -1841,40 +1834,31 @@ end)
                     Option.BackgroundTransparency = Transparency
                     Option.BorderSizePixel = 0
                     Option.Position = UDim2.new(0, 0, 0.328125, 0)
-                    Option.Size = UDim2.new(0, 428, 0, 26)
+                    Option.Size = UDim2.new(0, 428, 0, 30)
                     Option.AutoButtonColor = false
                     Option.Font = Enum.Font.Gotham
                     Option.Text = option
-                    Option.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    Option.TextColor3 = TextColor
                     Option.TextSize = 14.000
+                    Option.ZIndex = 8
 
                     OptionC.CornerRadius = UDim.new(0, 6)
                     OptionC.Name = "OptionC"
                     OptionC.Parent = Option
 
-                    -- 选项悬停效果 - 更流畅的动画
+                    -- 选项悬停效果
                     Option.MouseEnter:Connect(function()
-                        game:GetService("TweenService"):Create(
-                            Option,
-                            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {
-                                BackgroundTransparency = HoverTransparency,
-                                TextColor3 = AccentColor,
-                                Size = UDim2.new(0, 428, 0, 30)
-                            }
-                        ):Play()
+                        Tween(Option, {0.2, "Quad", "Out"}, {
+                            BackgroundTransparency = HoverTransparency,
+                            TextColor3 = AccentColor
+                        })
                     end)
 
                     Option.MouseLeave:Connect(function()
-                        game:GetService("TweenService"):Create(
-                            Option,
-                            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {
-                                BackgroundTransparency = Transparency,
-                                TextColor3 = Color3.fromRGB(255, 255, 255),
-                                Size = UDim2.new(0, 428, 0, 26)
-                            }
-                        ):Play()
+                        Tween(Option, {0.2, "Quad", "Out"}, {
+                            BackgroundTransparency = Transparency,
+                            TextColor3 = TextColor
+                        })
                     end)
 
                     Option.MouseButton1Click:Connect(
