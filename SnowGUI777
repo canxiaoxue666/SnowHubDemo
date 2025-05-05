@@ -160,7 +160,7 @@ function library.new(library, name, theme)
     local beijingColor = Color3.fromRGB(70, 70, 90)
     local AccentColor = Color3.fromRGB(100, 150, 255) -- 蓝色作为点缀色
 
-    -- 透明度控制
+    -- 半透明效果
     local Transparency = 0.3
     local HoverTransparency = 0.1
 
@@ -185,6 +185,8 @@ function library.new(library, name, theme)
     local UIGradientTitle = Instance.new("UIGradient")
     local Border = Instance.new("Frame")
     local BorderGradient = Instance.new("UIGradient")
+    local InnerGlow = Instance.new("ImageLabel")
+    local OuterGlow = Instance.new("ImageLabel")
 
     if syn and syn.protect_gui then
         syn.protect_gui(dogent)
@@ -220,7 +222,7 @@ function library.new(library, name, theme)
     Main.Active = true
     Main.Draggable = true
 
-    -- 炫彩描边
+    -- 彩色边框
     Border.Name = "Border"
     Border.Parent = Main
     Border.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -248,11 +250,51 @@ function library.new(library, name, theme)
     )
     borderTween:Play()
 
+    -- 内发光效果
+    InnerGlow.Name = "InnerGlow"
+    InnerGlow.Parent = Main
+    InnerGlow.BackgroundTransparency = 1
+    InnerGlow.Size = UDim2.new(1, 0, 1, 0)
+    InnerGlow.ZIndex = 0
+    InnerGlow.Image = "rbxassetid://5028857084"
+    InnerGlow.ImageColor3 = Color3.fromRGB(100, 150, 255)
+    InnerGlow.ImageTransparency = 0.8
+    InnerGlow.ScaleType = Enum.ScaleType.Slice
+    InnerGlow.SliceCenter = Rect.new(24, 24, 276, 276)
+    
+    -- 外发光效果
+    OuterGlow.Name = "OuterGlow"
+    OuterGlow.Parent = Main
+    OuterGlow.BackgroundTransparency = 1
+    OuterGlow.Size = UDim2.new(1, 40, 1, 40)
+    OuterGlow.Position = UDim2.new(0, -20, 0, -20)
+    OuterGlow.ZIndex = -1
+    OuterGlow.Image = "rbxassetid://5028857084"
+    OuterGlow.ImageColor3 = Color3.fromRGB(100, 150, 255)
+    OuterGlow.ImageTransparency = 0.9
+    OuterGlow.ScaleType = Enum.ScaleType.Slice
+    OuterGlow.SliceCenter = Rect.new(24, 24, 276, 276)
+    
+    -- 发光动画
+    local glowTween = game:GetService("TweenService"):Create(
+        InnerGlow,
+        TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, true),
+        {ImageTransparency = 0.7}
+    )
+    glowTween:Play()
+    
+    local outerGlowTween = game:GetService("TweenService"):Create(
+        OuterGlow,
+        TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, true),
+        {ImageTransparency = 0.8}
+    )
+    outerGlowTween:Play()
+
     -- 主窗口圆角
     UICornerMain.Parent = Main
     UICornerMain.CornerRadius = UDim.new(0, 8)
 
-    -- 增强阴影效果
+    -- 阴影效果
     DropShadowHolder.Name = "DropShadowHolder"
     DropShadowHolder.Parent = Main
     DropShadowHolder.BackgroundTransparency = 1.000
@@ -388,11 +430,11 @@ function library.new(library, name, theme)
     ScriptTitle.TextScaled = true
     ScriptTitle.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- 标题渐变效果
+    -- 标题渐变
     UIGradientTitle.Color = ColorSequence.new{
         ColorSequenceKeypoint.new(0.00, AccentColor),
         ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1.00, AccentColor)
+        ColorSequenceKeypoint.new(1.00, AccentColor))
     }
     UIGradientTitle.Parent = ScriptTitle
 
@@ -442,12 +484,31 @@ OpenImage.ScaleType = Enum.ScaleType.Fit
 local UICorner = Instance.new("UICorner", Open)
 UICorner.CornerRadius = UDim.new(0, 9)
 
+-- 按钮发光效果
+local OpenGlow = Instance.new("ImageLabel")
+OpenGlow.Name = "OpenGlow"
+OpenGlow.Parent = Open
+OpenGlow.BackgroundTransparency = 1
+OpenGlow.Size = UDim2.new(1, 20, 1, 20)
+OpenGlow.Position = UDim2.new(0, -10, 0, -10)
+OpenGlow.ZIndex = -1
+OpenGlow.Image = "rbxassetid://5028857084"
+OpenGlow.ImageColor3 = AccentColor
+OpenGlow.ImageTransparency = 0.9
+OpenGlow.ScaleType = Enum.ScaleType.Slice
+OpenGlow.SliceCenter = Rect.new(24, 24, 276, 276)
+
 -- 按钮悬停效果
 Open.MouseEnter:Connect(function()
     game:GetService("TweenService"):Create(
         Open,
         TweenInfo.new(0.2),
         {BackgroundTransparency = HoverTransparency}
+    ):Play()
+    game:GetService("TweenService"):Create(
+        OpenGlow,
+        TweenInfo.new(0.2),
+        {ImageTransparency = 0.7}
     ):Play()
 end)
 
@@ -456,6 +517,11 @@ Open.MouseLeave:Connect(function()
         Open,
         TweenInfo.new(0.2),
         {BackgroundTransparency = Transparency}
+    ):Play()
+    game:GetService("TweenService"):Create(
+        OpenGlow,
+        TweenInfo.new(0.2),
+        {ImageTransparency = 0.9}
     ):Play()
 end)
 
@@ -467,9 +533,21 @@ Open.MouseButton1Click:Connect(function()
     if isVisible then
         Main.Visible = false
         OpenImage.Image = hiddenImage
+        -- 关闭动画
+        game:GetService("TweenService"):Create(
+            Open,
+            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+            {Rotation = 180}
+        ):Play()
     else
         Main.Visible = true
         OpenImage.Image = shownImage
+        -- 打开动画
+        game:GetService("TweenService"):Create(
+            Open,
+            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Rotation = 0}
+        ):Play()
     end
     isVisible = not isVisible
 end)
@@ -501,6 +579,20 @@ end)
         TabIco.Image = ("rbxassetid://%s"):format((icon or 4370341699))
         TabIco.ImageTransparency = 0.2
 
+        -- 添加图标发光效果
+        local TabIconGlow = Instance.new("ImageLabel")
+        TabIconGlow.Name = "TabIconGlow"
+        TabIconGlow.Parent = TabIco
+        TabIconGlow.BackgroundTransparency = 1
+        TabIconGlow.Size = UDim2.new(1, 10, 1, 10)
+        TabIconGlow.Position = UDim2.new(0, -5, 0, -5)
+        TabIconGlow.ZIndex = -1
+        TabIconGlow.Image = "rbxassetid://5028857084"
+        TabIconGlow.ImageColor3 = AccentColor
+        TabIconGlow.ImageTransparency = 0.9
+        TabIconGlow.ScaleType = Enum.ScaleType.Slice
+        TabIconGlow.SliceCenter = Rect.new(24, 24, 276, 276)
+
         TabText.Name = "TabText"
         TabText.Parent = TabIco
         TabText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -530,6 +622,45 @@ end)
         TabL.Parent = Tab
         TabL.SortOrder = Enum.SortOrder.LayoutOrder
         TabL.Padding = UDim.new(0, 4)
+
+        -- 标签悬停效果
+        TabBtn.MouseEnter:Connect(function()
+            game:GetService("TweenService"):Create(
+                TabIco,
+                TweenInfo.new(0.2),
+                {ImageTransparency = 0}
+            ):Play()
+            game:GetService("TweenService"):Create(
+                TabText,
+                TweenInfo.new(0.2),
+                {TextTransparency = 0}
+            ):Play()
+            game:GetService("TweenService"):Create(
+                TabIconGlow,
+                TweenInfo.new(0.2),
+                {ImageTransparency = 0.7}
+            ):Play()
+        end)
+
+        TabBtn.MouseLeave:Connect(function()
+            if library.currentTab and library.currentTab[1] ~= TabIco then
+                game:GetService("TweenService"):Create(
+                    TabIco,
+                    TweenInfo.new(0.2),
+                    {ImageTransparency = 0.2}
+                ):Play()
+                game:GetService("TweenService"):Create(
+                    TabText,
+                    TweenInfo.new(0.2),
+                    {TextTransparency = 0.2}
+                ):Play()
+                game:GetService("TweenService"):Create(
+                    TabIconGlow,
+                    TweenInfo.new(0.2),
+                    {ImageTransparency = 0.9}
+                ):Play()
+            end
+        end)
 
         TabBtn.MouseButton1Click:Connect(
             function()
@@ -562,6 +693,7 @@ end)
             local SectionToggle = Instance.new("ImageButton")
             local Objs = Instance.new("Frame")
             local ObjsL = Instance.new("UIListLayout")
+            local SectionGlow = Instance.new("ImageLabel")
 
             Section.Name = "Section"
             Section.Parent = Tab
@@ -570,6 +702,19 @@ end)
             Section.BorderSizePixel = 0
             Section.ClipsDescendants = true
             Section.Size = UDim2.new(0.981000006, 0, 0, 36)
+
+            -- 添加章节发光效果
+            SectionGlow.Name = "SectionGlow"
+            SectionGlow.Parent = Section
+            SectionGlow.BackgroundTransparency = 1
+            SectionGlow.Size = UDim2.new(1, 10, 1, 10)
+            SectionGlow.Position = UDim2.new(0, -5, 0, -5)
+            SectionGlow.ZIndex = -1
+            SectionGlow.Image = "rbxassetid://5028857084"
+            SectionGlow.ImageColor3 = AccentColor
+            SectionGlow.ImageTransparency = 0.9
+            SectionGlow.ScaleType = Enum.ScaleType.Slice
+            SectionGlow.SliceCenter = Rect.new(24, 24, 276, 276)
 
             SectionC.CornerRadius = UDim.new(0, 8)
             SectionC.Name = "SectionC"
@@ -637,8 +782,31 @@ end)
                     Section.Size = UDim2.new(0.981000006, 0, 0, open and 36 + ObjsL.AbsoluteContentSize.Y + 8 or 36)
                     SectionOpened.ImageTransparency = (open and 0 or 1)
                     SectionOpen.ImageTransparency = (open and 1 or 0)
+                    -- 添加展开/收起动画
+                    game:GetService("TweenService"):Create(
+                        Section,
+                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Size = UDim2.new(0.981000006, 0, 0, open and 36 + ObjsL.AbsoluteContentSize.Y + 8 or 36)}
+                    ):Play()
                 end
             )
+
+            -- 章节悬停效果
+            Section.MouseEnter:Connect(function()
+                game:GetService("TweenService"):Create(
+                    SectionGlow,
+                    TweenInfo.new(0.2),
+                    {ImageTransparency = 0.7}
+                ):Play()
+            end)
+
+            Section.MouseLeave:Connect(function()
+                game:GetService("TweenService"):Create(
+                    SectionGlow,
+                    TweenInfo.new(0.2),
+                    {ImageTransparency = 0.9}
+                ):Play()
+            end)
 
             ObjsL:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(
                 function()
@@ -657,6 +825,7 @@ end)
                 local BtnModule = Instance.new("Frame")
                 local Btn = Instance.new("TextButton")
                 local BtnC = Instance.new("UICorner")
+                local BtnGlow = Instance.new("ImageLabel")
 
                 BtnModule.Name = "BtnModule"
                 BtnModule.Parent = Objs
@@ -683,6 +852,19 @@ end)
                 BtnC.Name = "BtnC"
                 BtnC.Parent = Btn
 
+                -- 按钮发光效果
+                BtnGlow.Name = "BtnGlow"
+                BtnGlow.Parent = Btn
+                BtnGlow.BackgroundTransparency = 1
+                BtnGlow.Size = UDim2.new(1, 10, 1, 10)
+                BtnGlow.Position = UDim2.new(0, -5, 0, -5)
+                BtnGlow.ZIndex = -1
+                BtnGlow.Image = "rbxassetid://5028857084"
+                BtnGlow.ImageColor3 = AccentColor
+                BtnGlow.ImageTransparency = 0.9
+                BtnGlow.ScaleType = Enum.ScaleType.Slice
+                BtnGlow.SliceCenter = Rect.new(24, 24, 276, 276)
+
                 -- 按钮悬停效果
                 Btn.MouseEnter:Connect(function()
                     game:GetService("TweenService"):Create(
@@ -692,6 +874,11 @@ end)
                             BackgroundTransparency = HoverTransparency,
                             TextColor3 = AccentColor
                         }
+                    ):Play()
+                    game:GetService("TweenService"):Create(
+                        BtnGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.7}
                     ):Play()
                 end)
 
@@ -704,6 +891,11 @@ end)
                             TextColor3 = Color3.fromRGB(255, 255, 255)
                         }
                     ):Play()
+                    game:GetService("TweenService"):Create(
+                        BtnGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.9}
+                    ):Play()
                 end)
 
                 Btn.MouseButton1Click:Connect(
@@ -713,6 +905,17 @@ end)
                                 Ripple(Btn)
                             end
                         )
+                        -- 添加点击动画
+                        game:GetService("TweenService"):Create(
+                            Btn,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 420, 0, 36)}
+                        ):Play()
+                        game:GetService("TweenService"):Create(
+                            Btn,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 428, 0, 38)}
+                        ):Play()
                         spawn(callback)
                     end
                 )
@@ -722,6 +925,7 @@ end)
                 local LabelModule = Instance.new("Frame")
                 local TextLabel = Instance.new("TextLabel")
                 local LabelC = Instance.new("UICorner")
+                local LabelGlow = Instance.new("ImageLabel")
 
                 LabelModule.Name = "LabelModule"
                 LabelModule.Parent = Objs
@@ -740,9 +944,30 @@ end)
                 TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                 TextLabel.TextSize = 14.000
 
+                -- 标签发光效果
+                LabelGlow.Name = "LabelGlow"
+                LabelGlow.Parent = TextLabel
+                LabelGlow.BackgroundTransparency = 1
+                LabelGlow.Size = UDim2.new(1, 10, 1, 10)
+                LabelGlow.Position = UDim2.new(0, -5, 0, -5)
+                LabelGlow.ZIndex = -1
+                LabelGlow.Image = "rbxassetid://5028857084"
+                LabelGlow.ImageColor3 = AccentColor
+                LabelGlow.ImageTransparency = 0.9
+                LabelGlow.ScaleType = Enum.ScaleType.Slice
+                LabelGlow.SliceCenter = Rect.new(24, 24, 276, 276)
+
                 LabelC.CornerRadius = UDim.new(0, 6)
                 LabelC.Name = "LabelC"
                 LabelC.Parent = TextLabel
+                
+                -- 标签动画
+                game:GetService("TweenService"):Create(
+                    TextLabel,
+                    TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {TextTransparency = 0}
+                ):Play()
+                
                 return TextLabel
             end
 
@@ -761,6 +986,7 @@ end)
                 local ToggleSwitch = Instance.new("Frame")
                 local ToggleSwitchC = Instance.new("UICorner")
                 local ToggleDisableC = Instance.new("UICorner")
+                local ToggleGlow = Instance.new("ImageLabel")
 
                 ToggleModule.Name = "ToggleModule"
                 ToggleModule.Parent = Objs
@@ -786,6 +1012,19 @@ end)
                 ToggleBtnC.CornerRadius = UDim.new(0, 8)
                 ToggleBtnC.Name = "ToggleBtnC"
                 ToggleBtnC.Parent = ToggleBtn
+
+                -- 开关发光效果
+                ToggleGlow.Name = "ToggleGlow"
+                ToggleGlow.Parent = ToggleBtn
+                ToggleGlow.BackgroundTransparency = 1
+                ToggleGlow.Size = UDim2.new(1, 10, 1, 10)
+                ToggleGlow.Position = UDim2.new(0, -5, 0, -5)
+                ToggleGlow.ZIndex = -1
+                ToggleGlow.Image = "rbxassetid://5028857084"
+                ToggleGlow.ImageColor3 = AccentColor
+                ToggleGlow.ImageTransparency = 0.9
+                ToggleGlow.ScaleType = Enum.ScaleType.Slice
+                ToggleGlow.SliceCenter = Rect.new(24, 24, 276, 276)
 
                 ToggleDisable.Name = "ToggleDisable"
                 ToggleDisable.Parent = ToggleBtn
@@ -818,11 +1057,22 @@ end)
                         end
                         services.TweenService:Create(
                             ToggleSwitch,
-                            TweenInfo.new(0.2),
+                            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                             {
                                 Position = UDim2.new(0, (state and ToggleSwitch.Size.X.Offset / 2 or 0), 0, 0),
                                 BackgroundColor3 = (state and AccentColor or beijingColor)
                             }
+                        ):Play()
+                        -- 开关动画
+                        game:GetService("TweenService"):Create(
+                            ToggleBtn,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 420, 0, 36)}
+                        ):Play()
+                        game:GetService("TweenService"):Create(
+                            ToggleBtn,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 428, 0, 38)}
                         ):Play()
                         library.flags[flag] = state
                         callback(state)
@@ -844,6 +1094,11 @@ end)
                             TextColor3 = AccentColor
                         }
                     ):Play()
+                    game:GetService("TweenService"):Create(
+                        ToggleGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.7}
+                    ):Play()
                 end)
 
                 ToggleBtn.MouseLeave:Connect(function()
@@ -854,6 +1109,11 @@ end)
                             BackgroundTransparency = Transparency,
                             TextColor3 = Color3.fromRGB(255, 255, 255)
                         }
+                    ):Play()
+                    game:GetService("TweenService"):Create(
+                        ToggleGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.9}
                     ):Play()
                 end)
 
@@ -896,7 +1156,7 @@ end)
                 }
 
                 local bindKey = default
-                local keyTxt = (default and (shortNames[default.Name] or default.Name) or "None")
+                local keyTxt = (default and (shortNames[default.Name] or default.Name) or "None"
 
                 local KeybindModule = Instance.new("Frame")
                 local KeybindBtn = Instance.new("TextButton")
@@ -905,6 +1165,7 @@ end)
                 local KeybindValueC = Instance.new("UICorner")
                 local KeybindL = Instance.new("UIListLayout")
                 local UIPadding = Instance.new("UIPadding")
+                local KeybindGlow = Instance.new("ImageLabel")
 
                 KeybindModule.Name = "KeybindModule"
                 KeybindModule.Parent = Objs
@@ -930,6 +1191,19 @@ end)
                 KeybindBtnC.CornerRadius = UDim.new(0, 8)
                 KeybindBtnC.Name = "KeybindBtnC"
                 KeybindBtnC.Parent = KeybindBtn
+
+                -- 键位绑定发光效果
+                KeybindGlow.Name = "KeybindGlow"
+                KeybindGlow.Parent = KeybindBtn
+                KeybindGlow.BackgroundTransparency = 1
+                KeybindGlow.Size = UDim2.new(1, 10, 1, 10)
+                KeybindGlow.Position = UDim2.new(0, -5, 0, -5)
+                KeybindGlow.ZIndex = -1
+                KeybindGlow.Image = "rbxassetid://5028857084"
+                KeybindGlow.ImageColor3 = AccentColor
+                KeybindGlow.ImageTransparency = 0.9
+                KeybindGlow.ScaleType = Enum.ScaleType.Slice
+                KeybindGlow.SliceCenter = Rect.new(24, 24, 276, 276)
 
                 KeybindValue.Name = "KeybindValue"
                 KeybindValue.Parent = KeybindBtn
@@ -967,6 +1241,11 @@ end)
                             TextColor3 = AccentColor
                         }
                     ):Play()
+                    game:GetService("TweenService"):Create(
+                        KeybindGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.7}
+                    ):Play()
                 end)
 
                 KeybindBtn.MouseLeave:Connect(function()
@@ -977,6 +1256,11 @@ end)
                             BackgroundTransparency = Transparency,
                             TextColor3 = Color3.fromRGB(255, 255, 255)
                         }
+                    ):Play()
+                    game:GetService("TweenService"):Create(
+                        KeybindGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.9}
                     ):Play()
                 end)
 
@@ -1019,6 +1303,18 @@ end)
 
                 KeybindValue.MouseButton1Click:Connect(
                     function()
+                        -- 添加点击动画
+                        game:GetService("TweenService"):Create(
+                            KeybindValue,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 90, 0, 24)}
+                        ):Play()
+                        game:GetService("TweenService"):Create(
+                            KeybindValue,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 100, 0, 28)}
+                        ):Play()
+                        
                         KeybindValue.Text = "..."
                         wait()
                         local key, uwu = services.UserInputService.InputEnded:Wait()
@@ -1034,6 +1330,7 @@ end)
                         wait()
                         bindKey = Enum.KeyCode[keyName]
                         KeybindValue.Text = shortNames[keyName] or keyName
+                        keyTxt = KeybindValue.Text
                     end
                 )
 
@@ -1061,6 +1358,7 @@ end)
                 local TextBox = Instance.new("TextBox")
                 local TextboxBackL = Instance.new("UIListLayout")
                 local TextboxBackP = Instance.new("UIPadding")
+                local TextboxGlow = Instance.new("ImageLabel")
 
                 TextboxModule.Name = "TextboxModule"
                 TextboxModule.Parent = Objs
@@ -1086,6 +1384,19 @@ end)
                 TextboxBackC.CornerRadius = UDim.new(0, 6)
                 TextboxBackC.Name = "TextboxBackC"
                 TextboxBackC.Parent = TextboxBack
+
+                -- 文本框发光效果
+                TextboxGlow.Name = "TextboxGlow"
+                TextboxGlow.Parent = TextboxBack
+                TextboxGlow.BackgroundTransparency = 1
+                TextboxGlow.Size = UDim2.new(1, 10, 1, 10)
+                TextboxGlow.Position = UDim2.new(0, -5, 0, -5)
+                TextboxGlow.ZIndex = -1
+                TextboxGlow.Image = "rbxassetid://5028857084"
+                TextboxGlow.ImageColor3 = AccentColor
+                TextboxGlow.ImageTransparency = 0.9
+                TextboxGlow.ScaleType = Enum.ScaleType.Slice
+                TextboxGlow.SliceCenter = Rect.new(24, 24, 276, 276)
 
                 BoxBG.Name = "BoxBG"
                 BoxBG.Parent = TextboxBack
@@ -1134,6 +1445,11 @@ end)
                             TextColor3 = AccentColor
                         }
                     ):Play()
+                    game:GetService("TweenService"):Create(
+                        TextboxGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.7}
+                    ):Play()
                 end)
 
                 TextboxBack.MouseLeave:Connect(function()
@@ -1144,6 +1460,11 @@ end)
                             BackgroundTransparency = Transparency,
                             TextColor3 = Color3.fromRGB(255, 255, 255)
                         }
+                    ):Play()
+                    game:GetService("TweenService"):Create(
+                        TextboxGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.9}
                     ):Play()
                 end)
 
@@ -1167,12 +1488,27 @@ end)
                     ):Play()
                 end)
 
+                TextBox.Focused:Connect(function()
+                    -- 文本框聚焦动画
+                    game:GetService("TweenService"):Create(
+                        BoxBG,
+                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {BackgroundColor3 = AccentColor}
+                    ):Play()
+                end)
+
                 TextBox.FocusLost:Connect(function()
                     if TextBox.Text == "" then
                       TextBox.Text = default
                     end
                     library.flags[flag] = TextBox.Text
                     callback(TextBox.Text)
+                    -- 文本框失去焦点动画
+                    game:GetService("TweenService"):Create(
+                        BoxBG,
+                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {BackgroundColor3 = Background}
+                    ):Play()
                   end)
           
                   TextBox:GetPropertyChangedSignal("TextBounds"):Connect(function()
@@ -1206,6 +1542,7 @@ end)
                 local SliderValue = Instance.new("TextBox")
                 local MinSlider = Instance.new("TextButton")
                 local AddSlider = Instance.new("TextButton")
+                local SliderGlow = Instance.new("ImageLabel")
 
                 SliderModule.Name = "SliderModule"
                 SliderModule.Parent = Objs
@@ -1231,6 +1568,19 @@ end)
                 SliderBackC.CornerRadius = UDim.new(0, 6)
                 SliderBackC.Name = "SliderBackC"
                 SliderBackC.Parent = SliderBack
+
+                -- 滑块发光效果
+                SliderGlow.Name = "SliderGlow"
+                SliderGlow.Parent = SliderBack
+                SliderGlow.BackgroundTransparency = 1
+                SliderGlow.Size = UDim2.new(1, 10, 1, 10)
+                SliderGlow.Position = UDim2.new(0, -5, 0, -5)
+                SliderGlow.ZIndex = -1
+                SliderGlow.Image = "rbxassetid://5028857084"
+                SliderGlow.ImageColor3 = AccentColor
+                SliderGlow.ImageTransparency = 0.9
+                SliderGlow.ScaleType = Enum.ScaleType.Slice
+                SliderGlow.SliceCenter = Rect.new(24, 24, 276, 276)
 
                 SliderBar.Name = "SliderBar"
                 SliderBar.Parent = SliderBack
@@ -1320,6 +1670,11 @@ end)
                             TextColor3 = AccentColor
                         }
                     ):Play()
+                    game:GetService("TweenService"):Create(
+                        SliderGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.7}
+                    ):Play()
                 end)
 
                 SliderBack.MouseLeave:Connect(function()
@@ -1330,6 +1685,11 @@ end)
                             BackgroundTransparency = Transparency,
                             TextColor3 = Color3.fromRGB(255, 255, 255)
                         }
+                    ):Play()
+                    game:GetService("TweenService"):Create(
+                        SliderGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.9}
                     ):Play()
                 end)
 
@@ -1377,6 +1737,17 @@ end)
                         local currentValue = library.flags[flag]
                         currentValue = math.clamp(currentValue - 1, min, max)
                         funcs:SetValue(currentValue)
+                        -- 减少按钮动画
+                        game:GetService("TweenService"):Create(
+                            MinSlider,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 18, 0, 18)}
+                        ):Play()
+                        game:GetService("TweenService"):Create(
+                            MinSlider,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 20, 0, 20)}
+                        ):Play()
                     end
                 )
 
@@ -1385,6 +1756,17 @@ end)
                         local currentValue = library.flags[flag]
                         currentValue = math.clamp(currentValue + 1, min, max)
                         funcs:SetValue(currentValue)
+                        -- 增加按钮动画
+                        game:GetService("TweenService"):Create(
+                            AddSlider,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 18, 0, 18)}
+                        ):Play()
+                        game:GetService("TweenService"):Create(
+                            AddSlider,
+                            TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                            {Size = UDim2.new(0, 20, 0, 20)}
+                        ):Play()
                     end
                 )
 
@@ -1451,6 +1833,12 @@ end)
                 SliderValue.Focused:Connect(
                     function()
                         boxFocused = true
+                        -- 数值框聚焦动画
+                        game:GetService("TweenService"):Create(
+                            SliderValBG,
+                            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundColor3 = AccentColor}
+                        ):Play()
                     end
                 )
 
@@ -1460,6 +1848,12 @@ end)
                         if SliderValue.Text == "" then
                             funcs:SetValue(default)
                         end
+                        -- 数值框失去焦点动画
+                        game:GetService("TweenService"):Create(
+                            SliderValBG,
+                            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundColor3 = Background}
+                        ):Play()
                     end
                 )
 
@@ -1502,6 +1896,7 @@ end)
                 local DropdownModuleL = Instance.new("UIListLayout")
                 local Option = Instance.new("TextButton")
                 local OptionC = Instance.new("UICorner")
+                local DropdownGlow = Instance.new("ImageLabel")
 
                 DropdownModule.Name = "DropdownModule"
                 DropdownModule.Parent = Objs
@@ -1528,6 +1923,19 @@ end)
                 DropdownTopC.CornerRadius = UDim.new(0, 6)
                 DropdownTopC.Name = "DropdownTopC"
                 DropdownTopC.Parent = DropdownTop
+
+                -- 下拉框发光效果
+                DropdownGlow.Name = "DropdownGlow"
+                DropdownGlow.Parent = DropdownTop
+                DropdownGlow.BackgroundTransparency = 1
+                DropdownGlow.Size = UDim2.new(1, 10, 1, 10)
+                DropdownGlow.Position = UDim2.new(0, -5, 0, -5)
+                DropdownGlow.ZIndex = -1
+                DropdownGlow.Image = "rbxassetid://5028857084"
+                DropdownGlow.ImageColor3 = AccentColor
+                DropdownGlow.ImageTransparency = 0.9
+                DropdownGlow.ScaleType = Enum.ScaleType.Slice
+                DropdownGlow.SliceCenter = Rect.new(24, 24, 276, 276)
 
                 DropdownOpen.Name = "DropdownOpen"
                 DropdownOpen.Parent = DropdownTop
@@ -1573,6 +1981,11 @@ end)
                             TextColor3 = AccentColor
                         }
                     ):Play()
+                    game:GetService("TweenService"):Create(
+                        DropdownGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.7}
+                    ):Play()
                 end)
 
                 DropdownTop.MouseLeave:Connect(function()
@@ -1583,6 +1996,11 @@ end)
                             BackgroundTransparency = Transparency,
                             TextColor3 = Color3.fromRGB(255, 255, 255)
                         }
+                    ):Play()
+                    game:GetService("TweenService"):Create(
+                        DropdownGlow,
+                        TweenInfo.new(0.2),
+                        {ImageTransparency = 0.9}
                     ):Play()
                 end)
 
@@ -1641,11 +2059,29 @@ end)
                         setAllVisible()
                     end
                     DropdownOpen.Text = (open and "-" or "+")
-                    DropdownModule.Size =
-                        UDim2.new(0, 428, 0, (open and DropdownModuleL.AbsoluteContentSize.Y + 4 or 38))
+                    -- 下拉动画
+                    game:GetService("TweenService"):Create(
+                        DropdownModule,
+                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Size = UDim2.new(0, 428, 0, (open and DropdownModuleL.AbsoluteContentSize.Y + 4 or 38))}
+                    ):Play()
                 end
 
-                DropdownOpen.MouseButton1Click:Connect(ToggleDropVis)
+                DropdownOpen.MouseButton1Click:Connect(function()
+                    ToggleDropVis()
+                    -- 按钮点击动画
+                    game:GetService("TweenService"):Create(
+                        DropdownOpen,
+                        TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                        {Size = UDim2.new(0, 18, 0, 18)}
+                    ):Play()
+                    game:GetService("TweenService"):Create(
+                        DropdownOpen,
+                        TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                        {Size = UDim2.new(0, 20, 0, 20)}
+                    ):Play()
+                end)
+                
                 DropdownText.Focused:Connect(
                     function()
                         if open then
@@ -1677,6 +2113,7 @@ end)
                 funcs.AddOption = function(self, option)
                     local Option = Instance.new("TextButton")
                     local OptionC = Instance.new("UICorner")
+                    local OptionGlow = Instance.new("ImageLabel")
 
                     Option.Name = "Option_" .. option
                     Option.Parent = DropdownModule
@@ -1695,6 +2132,19 @@ end)
                     OptionC.Name = "OptionC"
                     OptionC.Parent = Option
 
+                    -- 选项发光效果
+                    OptionGlow.Name = "OptionGlow"
+                    OptionGlow.Parent = Option
+                    OptionGlow.BackgroundTransparency = 1
+                    OptionGlow.Size = UDim2.new(1, 10, 1, 10)
+                    OptionGlow.Position = UDim2.new(0, -5, 0, -5)
+                    OptionGlow.ZIndex = -1
+                    OptionGlow.Image = "rbxassetid://5028857084"
+                    OptionGlow.ImageColor3 = AccentColor
+                    OptionGlow.ImageTransparency = 0.9
+                    OptionGlow.ScaleType = Enum.ScaleType.Slice
+                    OptionGlow.SliceCenter = Rect.new(24, 24, 276, 276)
+
                     -- 选项悬停效果
                     Option.MouseEnter:Connect(function()
                         game:GetService("TweenService"):Create(
@@ -1704,6 +2154,11 @@ end)
                                 BackgroundTransparency = HoverTransparency,
                                 TextColor3 = AccentColor
                             }
+                        ):Play()
+                        game:GetService("TweenService"):Create(
+                            OptionGlow,
+                            TweenInfo.new(0.2),
+                            {ImageTransparency = 0.7}
                         ):Play()
                     end)
 
@@ -1716,6 +2171,11 @@ end)
                                 TextColor3 = Color3.fromRGB(255, 255, 255)
                             }
                         ):Play()
+                        game:GetService("TweenService"):Create(
+                            OptionGlow,
+                            TweenInfo.new(0.2),
+                            {ImageTransparency = 0.9}
+                        ):Play()
                     end)
 
                     Option.MouseButton1Click:Connect(
@@ -1724,6 +2184,17 @@ end)
                             callback(Option.Text)
                             DropdownText.Text = Option.Text
                             library.flags[flag] = Option.Text
+                            -- 选项点击动画
+                            game:GetService("TweenService"):Create(
+                                Option,
+                                TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                                {Size = UDim2.new(0, 420, 0, 24)}
+                            ):Play()
+                            game:GetService("TweenService"):Create(
+                                Option,
+                                TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                                {Size = UDim2.new(0, 428, 0, 26)}
+                            ):Play()
                         end
                     )
                 end
