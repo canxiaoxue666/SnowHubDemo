@@ -1,0 +1,93 @@
+local DarkPopup = {}
+
+-- 创建弹窗函数
+function DarkPopup:CreatePopup(title, content, duration, progressBarColor, icon)
+    local player = game.Players.LocalPlayer
+    local playerGui = player:WaitForChild("PlayerGui")
+
+    -- 创建主框架
+    local popup = Instance.new("Frame")
+    popup.Size = UDim2.new(0, 300, 0, 100)
+    popup.Position = UDim2.new(1, -320, 1, -120) -- 屏幕右下角
+    popup.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    popup.BorderSizePixel = 0
+    popup.AnchorPoint = Vector2.new(1, 1)
+    popup.BackgroundTransparency = 0.1
+    popup.Parent = playerGui:FindFirstChild("ScreenGui") or Instance.new("ScreenGui", playerGui)
+    popup.ClipsDescendants = true
+    popup.Name = "DarkPopup"
+
+    -- 圆角
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = popup
+
+    -- 图标
+    if icon then
+        local iconImage = Instance.new("ImageLabel")
+        iconImage.Size = UDim2.new(0, 40, 0, 40)
+        iconImage.Position = UDim2.new(0, 10, 0, 10)
+        iconImage.BackgroundTransparency = 1
+        iconImage.Image = icon
+        iconImage.Parent = popup
+    end
+
+    -- 标题
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -60, 0, 30)
+    titleLabel.Position = UDim2.new(0, 60, 0, 10)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextSize = 16
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = popup
+
+    -- 内容
+    local contentLabel = Instance.new("TextLabel")
+    contentLabel.Size = UDim2.new(1, -20, 0, 40)
+    contentLabel.Position = UDim2.new(0, 10, 0, 50)
+    contentLabel.BackgroundTransparency = 1
+    contentLabel.Text = content
+    contentLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    contentLabel.Font = Enum.Font.Gotham
+    contentLabel.TextSize = 14
+    contentLabel.TextWrapped = true
+    contentLabel.TextXAlignment = Enum.TextXAlignment.Left
+    contentLabel.TextYAlignment = Enum.TextYAlignment.Top
+    contentLabel.Parent = popup
+
+    -- 进度条
+    local progressBar = Instance.new("Frame")
+    progressBar.Size = UDim2.new(1, 0, 0, 5)
+    progressBar.Position = UDim2.new(0, 0, 1, -5)
+    progressBar.BackgroundColor3 = progressBarColor or Color3.fromRGB(0, 170, 255)
+    progressBar.BorderSizePixel = 0
+    progressBar.Parent = popup
+
+    -- 圆角进度条
+    local progressCorner = Instance.new("UICorner")
+    progressCorner.CornerRadius = UDim.new(0, 5)
+    progressCorner.Parent = progressBar
+
+    -- 动画：弹窗淡入
+    popup.BackgroundTransparency = 1
+    popup:TweenPosition(UDim2.new(1, -320, 1, -120), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
+    popup:TweenSize(UDim2.new(0, 300, 0, 100), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
+    game:GetService("TweenService"):Create(popup, TweenInfo.new(0.5), {BackgroundTransparency = 0.1}):Play()
+
+    -- 动画：进度条减少
+    local tweenService = game:GetService("TweenService")
+    local tween = tweenService:Create(progressBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 5)})
+    tween:Play()
+
+    -- 自动销毁
+    tween.Completed:Connect(function()
+        popup:TweenPosition(UDim2.new(1, -320, 1, 0), Enum.EasingDirection.In, Enum.EasingStyle.Quad, 0.5, true)
+        wait(0.5)
+        popup:Destroy()
+    end)
+end
+
+return DarkPopup
