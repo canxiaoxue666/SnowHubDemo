@@ -1,8 +1,8 @@
 local Notification = {}
 
--- 创建主GUI容器（如果不存在）
-local GUI = game:GetService("CoreGui"):FindFirstChild("Snow_Notification") 
-if not GUI then 
+-- Create main GUI container if it doesn't exist
+local GUI = game:GetService("CoreGui"):FindFirstChild("Snow_Notification")
+if not GUI then
     local Snow_Notification = Instance.new("ScreenGui")
     local Snow_NotificationUIListLayout = Instance.new("UIListLayout")
     
@@ -16,14 +16,20 @@ if not GUI then
     Snow_NotificationUIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
     Snow_NotificationUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     Snow_NotificationUIListLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-    Snow_NotificationUIListLayout.Padding = UDim.new(0, 5) -- 添加间距
+    Snow_NotificationUIListLayout.Padding = UDim.new(0, 5)
 end
 
 function Notification:Notify(notifData, middleData, extraData)
-    local SelectedType = string.lower(tostring(middleData.Type))
+    local SelectedType = string.lower(tostring(middleData.Type or "default"))
     local GUI = game:GetService("CoreGui"):FindFirstChild("Snow_Notification")
     
-    -- 主容器
+    -- Custom colors with defaults
+    local accentColor = middleData.AccentColor or Color3.fromRGB(100, 150, 255)
+    local backgroundColor = middleData.BackgroundColor or Color3.fromRGB(25, 25, 30)
+    local textColor = middleData.TextColor or Color3.fromRGB(240, 240, 240)
+    local secondaryTextColor = middleData.SecondaryTextColor or Color3.fromRGB(180, 180, 180)
+    
+    -- Main container
     local mainContainer = Instance.new("Frame")
     mainContainer.Name = "SnowNotification"
     mainContainer.Parent = GUI
@@ -33,7 +39,7 @@ function Notification:Notify(notifData, middleData, extraData)
     mainContainer.Size = UDim2.new(0, 0, 0, 0)
     mainContainer.ZIndex = 10
     
-    -- 阴影效果
+    -- Shadow effect
     local shadow = Instance.new("ImageLabel")
     shadow.Name = "Shadow"
     shadow.Parent = mainContainer
@@ -41,95 +47,151 @@ function Notification:Notify(notifData, middleData, extraData)
     shadow.Size = UDim2.new(1, 10, 1, 10)
     shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
     shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-    shadow.Image = "rbxassetid://5554236805" -- 柔和的阴影
+    shadow.Image = "rbxassetid://5554236805"
     shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
     shadow.ImageTransparency = 0.7
     shadow.ScaleType = Enum.ScaleType.Slice
     shadow.SliceCenter = Rect.new(10, 10, 118, 118)
     shadow.ZIndex = 9
     
-    -- 主窗口
+    -- Main window
     local window = Instance.new("Frame")
     window.Name = "Window"
     window.Parent = mainContainer
-    window.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    window.BackgroundColor3 = backgroundColor
     window.BackgroundTransparency = 0.1
     window.BorderSizePixel = 0
-    window.Size = UDim2.new(0, 250, 0, 0)
+    window.Size = UDim2.new(0, 300, 0, 0)
     window.ZIndex = 10
     window.ClipsDescendants = true
     
-    -- 圆角效果
+    -- Rounded corners
     local corner = Instance.new("UICorner")
     corner.Parent = window
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     
-    -- 顶部装饰条
-    local topBar = Instance.new("Frame")
-    topBar.Name = "TopBar"
-    topBar.Parent = window
-    topBar.BackgroundColor3 = middleData.OutlineColor or Color3.fromRGB(50, 120, 200)
-    topBar.BorderSizePixel = 0
-    topBar.Size = UDim2.new(1, 0, 0, 3)
-    topBar.ZIndex = 11
+    -- Header container
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Parent = window
+    header.BackgroundTransparency = 1
+    header.Size = UDim2.new(1, 0, 0, 40)
+    header.ZIndex = 11
     
-    -- 标题
+    -- Icon (if provided)
+    if extraData and extraData.Image then
+        local icon = Instance.new("ImageLabel")
+        icon.Name = "Icon"
+        icon.Parent = header
+        icon.BackgroundTransparency = 1
+        icon.Position = UDim2.new(0, 10, 0.5, 0)
+        icon.AnchorPoint = Vector2.new(0, 0.5)
+        icon.Size = UDim2.new(0, 20, 0, 20)
+        icon.ZIndex = 12
+        icon.Image = extraData.Image
+        icon.ImageColor3 = extraData.ImageColor or accentColor
+    end
+    
+    -- Title
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Parent = window
+    title.Parent = header
     title.BackgroundTransparency = 1
-    title.Position = UDim2.new(0, 15, 0, 10)
-    title.Size = UDim2.new(1, -30, 0, 20)
-    title.ZIndex = 11
+    title.Position = UDim2.new(0, 40, 0.5, 0)
+    title.AnchorPoint = Vector2.new(0, 0.5)
+    title.Size = UDim2.new(1, -50, 0, 20)
+    title.ZIndex = 12
     title.Font = Enum.Font.GothamSemibold
     title.Text = notifData.Title or "Notification"
-    title.TextColor3 = Color3.fromRGB(240, 240, 240)
+    title.TextColor3 = textColor
     title.TextSize = 14
     title.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- 描述
+    -- Close button
+    local closeButton = Instance.new("ImageButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Parent = header
+    closeButton.BackgroundTransparency = 1
+    closeButton.Position = UDim2.new(1, -30, 0.5, 0)
+    closeButton.AnchorPoint = Vector2.new(1, 0.5)
+    closeButton.Size = UDim2.new(0, 20, 0, 20)
+    closeButton.ZIndex = 12
+    closeButton.Image = "rbxassetid://3926305904"
+    closeButton.ImageRectOffset = Vector2.new(284, 4)
+    closeButton.ImageRectSize = Vector2.new(24, 24)
+    closeButton.ImageColor3 = secondaryTextColor
+    
+    -- Divider line
+    local divider = Instance.new("Frame")
+    divider.Name = "Divider"
+    divider.Parent = window
+    divider.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    divider.BorderSizePixel = 0
+    divider.Position = UDim2.new(0, 0, 0, 40)
+    divider.Size = UDim2.new(1, 0, 0, 1)
+    divider.ZIndex = 11
+    
+    -- Content container
+    local content = Instance.new("Frame")
+    content.Name = "Content"
+    content.Parent = window
+    content.BackgroundTransparency = 1
+    content.Position = UDim2.new(0, 0, 0, 41)
+    content.Size = UDim2.new(1, 0, 0, 60)
+    content.ZIndex = 11
+    
+    -- Description
     local description = Instance.new("TextLabel")
     description.Name = "Description"
-    description.Parent = window
+    description.Parent = content
     description.BackgroundTransparency = 1
-    description.Position = UDim2.new(0, 15, 0, 35)
-    description.Size = UDim2.new(1, -30, 1, -50)
+    description.Position = UDim2.new(0, 15, 0, 0)
+    description.Size = UDim2.new(1, -30, 1, -20)
     description.ZIndex = 11
     description.Font = Enum.Font.Gotham
     description.Text = notifData.Description or ""
-    description.TextColor3 = Color3.fromRGB(180, 180, 180)
+    description.TextColor3 = secondaryTextColor
     description.TextSize = 12
     description.TextWrapped = true
     description.TextXAlignment = Enum.TextXAlignment.Left
     description.TextYAlignment = Enum.TextYAlignment.Top
     
-    -- 淡入动画
-    window:TweenSize(UDim2.new(0, 250, 0, 90), "Out", "Quad", 0.3, true)
-    mainContainer:TweenSize(UDim2.new(0, 250, 0, 90), "Out", "Quad", 0.3, true)
+    -- Time progress bar background
+    local timeBarBg = Instance.new("Frame")
+    timeBarBg.Name = "TimeBarBackground"
+    timeBarBg.Parent = content
+    timeBarBg.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    timeBarBg.BorderSizePixel = 0
+    timeBarBg.Position = UDim2.new(0, 15, 1, -15)
+    timeBarBg.Size = UDim2.new(1, -30, 0, 3)
+    timeBarBg.ZIndex = 12
     
-    -- 根据类型添加额外内容
-    if SelectedType == "image" then
-        window.Size = UDim2.new(0, 250, 0, 90)
-        title.Position = UDim2.new(0, 40, 0, 10)
-        
-        local icon = Instance.new("ImageLabel")
-        icon.Name = "Icon"
-        icon.Parent = window
-        icon.BackgroundTransparency = 1
-        icon.Position = UDim2.new(0, 10, 0, 10)
-        icon.Size = UDim2.new(0, 25, 0, 25)
-        icon.ZIndex = 11
-        icon.Image = extraData.Image or ""
-        icon.ImageColor3 = extraData.ImageColor or Color3.fromRGB(255, 255, 255)
-        
-    elseif SelectedType == "option" then
-        window.Size = UDim2.new(0, 250, 0, 120)
+    local timeBarBgCorner = Instance.new("UICorner")
+    timeBarBgCorner.Parent = timeBarBg
+    timeBarBgCorner.CornerRadius = UDim.new(1, 0)
+    
+    -- Time progress bar
+    local timeBar = Instance.new("Frame")
+    timeBar.Name = "TimeBar"
+    timeBar.Parent = timeBarBg
+    timeBar.BackgroundColor3 = accentColor
+    timeBar.BorderSizePixel = 0
+    timeBar.Size = UDim2.new(1, 0, 1, 0)
+    timeBar.ZIndex = 13
+    
+    local timeBarCorner = Instance.new("UICorner")
+    timeBarCorner.Parent = timeBar
+    timeBarCorner.CornerRadius = UDim.new(1, 0)
+    
+    -- Options buttons (if type is "option")
+    if SelectedType == "option" then
+        content.Size = UDim2.new(1, 0, 0, 90)
         
         local buttonContainer = Instance.new("Frame")
         buttonContainer.Name = "ButtonContainer"
-        buttonContainer.Parent = window
+        buttonContainer.Parent = content
         buttonContainer.BackgroundTransparency = 1
-        buttonContainer.Position = UDim2.new(0, 15, 0, 70)
+        buttonContainer.Position = UDim2.new(0, 15, 1, -40)
         buttonContainer.Size = UDim2.new(1, -30, 0, 30)
         buttonContainer.ZIndex = 11
         
@@ -137,7 +199,7 @@ function Notification:Notify(notifData, middleData, extraData)
         decline.Name = "Decline"
         decline.Parent = buttonContainer
         decline.BackgroundColor3 = Color3.fromRGB(80, 25, 25)
-        decline.BackgroundTransparency = 0.5
+        decline.BackgroundTransparency = 0.8
         decline.BorderSizePixel = 0
         decline.Position = UDim2.new(0, 0, 0, 0)
         decline.Size = UDim2.new(0.45, 0, 1, 0)
@@ -151,7 +213,7 @@ function Notification:Notify(notifData, middleData, extraData)
         accept.Name = "Accept"
         accept.Parent = buttonContainer
         accept.BackgroundColor3 = Color3.fromRGB(25, 80, 25)
-        accept.BackgroundTransparency = 0.5
+        accept.BackgroundTransparency = 0.8
         accept.BorderSizePixel = 0
         accept.Position = UDim2.new(0.55, 0, 0, 0)
         accept.Size = UDim2.new(0.45, 0, 1, 0)
@@ -161,33 +223,33 @@ function Notification:Notify(notifData, middleData, extraData)
         accept.TextColor3 = Color3.fromRGB(120, 255, 120)
         accept.TextSize = 12
         
-        -- 圆角按钮
+        -- Rounded buttons
         local declineCorner = Instance.new("UICorner")
         declineCorner.Parent = decline
-        declineCorner.CornerRadius = UDim.new(0, 6)
+        declineCorner.CornerRadius = UDim.new(0, 4)
         
         local acceptCorner = Instance.new("UICorner")
         acceptCorner.Parent = accept
-        acceptCorner.CornerRadius = UDim.new(0, 6)
+        acceptCorner.CornerRadius = UDim.new(0, 4)
         
-        -- 按钮交互
+        -- Button interactions
         decline.MouseEnter:Connect(function()
-            decline.BackgroundTransparency = 0.3
+            decline.BackgroundTransparency = 0.7
         end)
         
         decline.MouseLeave:Connect(function()
-            decline.BackgroundTransparency = 0.5
+            decline.BackgroundTransparency = 0.8
         end)
         
         accept.MouseEnter:Connect(function()
-            accept.BackgroundTransparency = 0.3
+            accept.BackgroundTransparency = 0.7
         end)
         
         accept.MouseLeave:Connect(function()
-            accept.BackgroundTransparency = 0.5
+            accept.BackgroundTransparency = 0.8
         end)
         
-        -- 按钮点击事件
+        -- Button click events
         decline.MouseButton1Click:Connect(function()
             pcall(function() extraData.Callback(false) end)
             closeNotification()
@@ -199,18 +261,37 @@ function Notification:Notify(notifData, middleData, extraData)
         end)
     end
     
-    -- 关闭通知的函数
+    -- Calculate window height based on content
+    local windowHeight = 40 + content.Size.Y.Offset + 1 -- header + content + divider
+    
+    -- Animate opening
+    window:TweenSize(UDim2.new(0, 300, 0, windowHeight), "Out", "Quad", 0.3, true)
+    mainContainer:TweenSize(UDim2.new(0, 300, 0, windowHeight), "Out", "Quad", 0.3, true)
+    
+    -- Close notification function
     local function closeNotification()
-        window:TweenSize(UDim2.new(0, 250, 0, 0), "Out", "Quad", 0.3, true)
-        mainContainer:TweenSize(UDim2.new(0, 250, 0, 0), "Out", "Quad", 0.3, true)
-        wait(0.3)
+        window:TweenSize(UDim2.new(0, 300, 0, 0), "Out", "Quad", 0.3, true)
+        mainContainer:TweenSize(UDim2.new(0, 300, 0, 0), "Out", "Quad", 0.3, true)
+        task.wait(0.3)
         mainContainer:Destroy()
     end
     
-    -- 自动关闭计时器
+    -- Close button event
+    closeButton.MouseButton1Click:Connect(closeNotification)
+    
+    -- Time progress animation
     if middleData.Time then
         spawn(function()
-            wait(middleData.Time)
+            local startTime = os.clock()
+            local endTime = startTime + middleData.Time
+            
+            while os.clock() < endTime and mainContainer and mainContainer.Parent do
+                local elapsed = os.clock() - startTime
+                local progress = elapsed / middleData.Time
+                timeBar.Size = UDim2.new(1 - progress, 0, 1, 0)
+                task.wait()
+            end
+            
             if mainContainer and mainContainer.Parent then
                 closeNotification()
             end
@@ -218,7 +299,8 @@ function Notification:Notify(notifData, middleData, extraData)
     end
     
     return {
-        Close = closeNotification
+        Close = closeNotification,
+        Instance = mainContainer
     }
 end
 
