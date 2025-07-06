@@ -4752,7 +4752,7 @@ end
 
 return b end function a.A()
 game:GetService"UserInputService"
-local aa=game.Players.LocalPlayer:GetMouse()
+local aa=game:GetService("Players").LocalPlayer:GetMouse()
 
 local ab=a.load'a'
 local ac=ab.New
@@ -6343,8 +6343,8 @@ end
 
 local B
 if p.User.Enabled then local
-C, D=game.Players:GetUserThumbnailAsync(
-p.User.Anonymous and 1 or game.Players.LocalPlayer.UserId,
+C, D=game:GetService("Players"):GetUserThumbnailAsync(
+p.User.Anonymous and 1 or game:GetService("Players").LocalPlayer.UserId,
 Enum.ThumbnailType.HeadShot,
 Enum.ThumbnailSize.Size420x420
 )
@@ -6385,7 +6385,7 @@ AutomaticSize="XY",
 BackgroundTransparency=1,
 },{
 e("TextLabel",{
-Text=p.User.Anonymous and"Anonymous"or game.Players.LocalPlayer.DisplayName,
+Text=p.User.Anonymous and"Anonymous"or game:GetService("Players").LocalPlayer.DisplayName,
 TextSize=17,
 ThemeTag={
 TextColor3="Text",
@@ -6398,7 +6398,7 @@ TextTruncate="AtEnd",
 TextXAlignment="Left",
 }),
 e("TextLabel",{
-Text=p.User.Anonymous and"@anonymous"or"@"..game.Players.LocalPlayer.Name,
+Text=p.User.Anonymous and"@anonymous"or"@"..game:GetService("Players").LocalPlayer.Name,
 TextSize=15,
 TextTransparency=.6,
 ThemeTag={
