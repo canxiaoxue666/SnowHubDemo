@@ -10,7 +10,7 @@
     To view the source code, see the 'Src' folder on the official GitHub repository.
     
     Author: .ftgs#0 (Discord User)
-    Github: https://github.com/Footagesus/SnowUI
+    Github: https://github.com/Footagesus/WindUI
     Discord: https://discord.gg/84CNGY5wAV
 ]]
 
@@ -34,7 +34,7 @@ Font="rbxassetid://12187365364",
 CanDraggable=true,
 Theme=nil,
 Themes=nil,
-SnowUI=nil,
+WindUI=nil,
 Signals={},
 Objects={},
 FontObjects={},
@@ -104,7 +104,7 @@ Grey="#484848",
 }
 
 function g.Init(h)
-g.SnowUI=h
+g.WindUI=h
 end
 
 
@@ -130,9 +130,9 @@ if not i then local
 k, l=j:find":%d+: "
 
 
-warn("[ SnowUI: DEBUG Mode ] "..j)
+warn("[ WindUI: DEBUG Mode ] "..j)
 
-return g.SnowUI:Notify{
+return g.WindUI:Notify{
 Title="DEBUG Mode: Error",
 Content=not l and j or j:sub(l+1),
 Duration=8,
@@ -379,7 +379,7 @@ s.ImageLabel.ImageRectOffset=g.Icon(j)[2].ImageRectPosition
 s.ImageLabel.ImageRectSize=g.Icon(j)[2].ImageRectSize
 end
 if string.find(j,"http")then
-local t="SnowUI/"..o.."/Assets/."..p.."-"..k..".png"
+local t="WindUI/"..o.."/Assets/."..p.."-"..k..".png"
 local u,v=pcall(function()
 task.spawn(function()
 if not isfile(t)then
@@ -394,7 +394,7 @@ s.ImageLabel.Image=getcustomasset(t)
 end)
 end)
 if not u then
-warn("[ SnowUI.Creator ]  '"..identifyexecutor().."' doesnt support the URL Images. Error: "..v)
+warn("[ WindUI.Creator ]  '"..identifyexecutor().."' doesnt support the URL Images. Error: "..v)
 
 s:Destroy()
 end
@@ -913,7 +913,7 @@ local g=a.load'c'.New
 local h=a.load'd'.New
 
 function b.new(i,j,k)
-local n=a.load'e'.Init(nil,i.SnowUI.ScreenGui.KeySystem)
+local n=a.load'e'.Init(nil,i.WindUI.ScreenGui.KeySystem)
 local o=n.Create(true)
 
 
@@ -937,7 +937,7 @@ s=d.Image(
 i.Icon,
 i.Title..":"..i.Icon,
 0,
-i.SnowUI.Window,
+i.WindUI.Window,
 "KeySystem",
 i.IconThemed
 )
@@ -1447,7 +1447,7 @@ Thumbnail=g.Thumbnail,
 Buttons=g.Buttons
 }
 
-local i=a.load'e'.Init(nil,g.SnowUI.ScreenGui.Popups)
+local i=a.load'e'.Init(nil,g.WindUI.ScreenGui.Popups)
 local j=i.Create(true)
 
 local k=200
@@ -1469,7 +1469,7 @@ o=d.Image(
 h.Icon,
 h.Title..":"..h.Icon,
 0,
-g.SnowUI.Window,
+g.WindUI.Window,
 "Popup",
 g.IconThemed
 )
@@ -1969,14 +1969,14 @@ end
 
 function d.Init(e,f)
 if not f.Folder then
-warn"[ SnowUI.ConfigManager ] Window.Folder is not specified."
+warn"[ WindUI.ConfigManager ] Window.Folder is not specified."
 
 return false
 end
 
 d.Window=f
 d.Folder=f.Folder
-d.Path="SnowUI/"..tostring(d.Folder).."/config/"
+d.Path="WindUI/"..tostring(d.Folder).."/config/"
 
 return d
 end
@@ -3295,7 +3295,7 @@ Position=UDim2.new(-10,0,-10,0),
 Visible=false,
 Active=false,
 GroupTransparency=1,
-Parent=p.SnowUI.DropdownGui,
+Parent=p.WindUI.DropdownGui,
 AnchorPoint=Vector2.new(1,0),
 },{
 q.UIElements.Menu,
@@ -4018,14 +4018,14 @@ local p,q=pcall(function()
 toclipboard(k.Code)
 end)
 if p then
-j.SnowUI:Notify{
+j.WindUI:Notify{
 Title="Success",
 Content="The "..o.." copied to your clipboard.",
 Icon="check",
 Duration=5,
 }
 else
-j.SnowUI:Notify{
+j.WindUI:Notify{
 Title="Error",
 Content="The "..o.." is not copied. Error: "..q,
 Icon="x",
@@ -4033,7 +4033,7 @@ Duration=5,
 }
 end
 end
-end,j.SnowUI.UIScale)
+end,j.WindUI.UIScale)
 
 function k.SetCode(p,q)
 o.Set(q)
@@ -4752,7 +4752,7 @@ end
 
 return b end function a.A()
 game:GetService"UserInputService"
-local aa=game:GetService("Players").LocalPlayer:GetMouse()
+local aa=game.Players.LocalPlayer:GetMouse()
 
 local ab=a.load'a'
 local ac=ab.New
@@ -4765,7 +4765,7 @@ local h=a.load'j'.New
 
 local i={
 Window=nil,
-SnowUI=nil,
+WindUI=nil,
 Tabs={},
 Containers={},
 SelectedTab=nil,
@@ -4778,7 +4778,7 @@ OnChangeFunc=function(i)end
 
 function i.Init(j,k,n,o)
 i.Window=j
-i.SnowUI=k
+i.WindUI=k
 i.ToolTipParent=n
 i.TabHighlight=o
 return i
@@ -4803,7 +4803,7 @@ UICorner=i.Window.UICorner-(i.Window.UIPadding/2),
 }
 
 local n=i.Window
-local o=i.SnowUI
+local o=i.WindUI
 
 i.TabCount=i.TabCount+1
 local p=i.TabCount
@@ -5147,7 +5147,7 @@ for z,A in pairs(y)do
 k[z]=function(B,C)
 C.Parent=B.UIElements.ContainerFrame
 C.Window=n
-C.SnowUI=o local
+C.WindUI=o local
 
 D, E=A:New(C)
 table.insert(B.Elements,E)
@@ -6013,7 +6013,7 @@ p.Resizable=true
 end
 
 if p.Folder then
-makefolder("SnowUI/"..p.Folder)
+makefolder("WindUI/"..p.Folder)
 end
 
 local q=e("UICorner",{
@@ -6343,8 +6343,8 @@ end
 
 local B
 if p.User.Enabled then local
-C, D=game:GetService("Players"):GetUserThumbnailAsync(
-p.User.Anonymous and 1 or game:GetService("Players").LocalPlayer.UserId,
+C, D=game.Players:GetUserThumbnailAsync(
+p.User.Anonymous and 1 or game.Players.LocalPlayer.UserId,
 Enum.ThumbnailType.HeadShot,
 Enum.ThumbnailSize.Size420x420
 )
@@ -6385,7 +6385,7 @@ AutomaticSize="XY",
 BackgroundTransparency=1,
 },{
 e("TextLabel",{
-Text=p.User.Anonymous and"Anonymous"or game:GetService("Players").LocalPlayer.DisplayName,
+Text=p.User.Anonymous and"Anonymous"or game.Players.LocalPlayer.DisplayName,
 TextSize=17,
 ThemeTag={
 TextColor3="Text",
@@ -6398,7 +6398,7 @@ TextTruncate="AtEnd",
 TextXAlignment="Left",
 }),
 e("TextLabel",{
-Text=p.User.Anonymous and"@anonymous"or"@"..game:GetService("Players").LocalPlayer.Name,
+Text=p.User.Anonymous and"@anonymous"or"@"..game.Players.LocalPlayer.Name,
 TextSize=15,
 TextTransparency=.6,
 ThemeTag={
@@ -6796,7 +6796,7 @@ n=true
 end
 if not n then
 n=not n
-o.SnowUI:Notify{
+o.WindUI:Notify{
 Title="Minimize",
 Content="You've closed the Window. "..K,
 Icon="eye-off",
@@ -6818,7 +6818,7 @@ task.wait(.06)
 p.Closed=false
 
 g(p.UIElements.Main.Background,0.2,{
-ImageTransparency=o.Transparent and o.SnowUI.TransparencyValue or 0,
+ImageTransparency=o.Transparent and o.WindUI.TransparencyValue or 0,
 },Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 
 g(p.UIElements.Main.Background,0.4,{
@@ -6910,9 +6910,9 @@ end
 function p.ToggleTransparency(K,L)
 
 p.Transparent=L
-o.SnowUI.Transparent=L
+o.WindUI.Transparent=L
 
-p.UIElements.Main.Background.ImageTransparency=L and o.SnowUI.TransparencyValue or 0
+p.UIElements.Main.Background.ImageTransparency=L and o.WindUI.TransparencyValue or 0
 
 p.UIElements.MainBar.Background.ImageTransparency=L and 0.97 or 0.95
 
@@ -6920,8 +6920,8 @@ end
 
 
 function p.SetUIScale(K,L)
-o.SnowUI.UIScale=L
-g(o.SnowUI.ScreenGui.UIScale,.2,{Scale=L},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
+o.WindUI.UIScale=L
+g(o.WindUI.ScreenGui.UIScale,.2,{Scale=L},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 end
 
 do
@@ -7027,7 +7027,7 @@ end
 
 local K=a.load'A'
 local L=a.load'B'
-local M=K.Init(p,o.SnowUI,o.Parent.Parent.ToolTips)
+local M=K.Init(p,o.WindUI,o.Parent.Parent.ToolTips)
 M:OnChange(function(N)p.CurrentTab=N end)
 
 p.TabModule=K
@@ -7042,7 +7042,7 @@ M:SelectTab(O)
 end
 
 function p.Section(N,O)
-return L.New(O,p.UIElements.SideBar.Frame,p.Folder,o.SnowUI.UIScale)
+return L.New(O,p.UIElements.SideBar.Frame,p.Folder,o.WindUI.UIScale)
 end
 
 function p.IsResizable(N,O)
@@ -7255,17 +7255,17 @@ p:CreateTopbarButton("Close","x",function()
 g(p.UIElements.Main,0.35,{Position=UDim2.new(0.5,0,0.5,0)},Enum.EasingStyle.Quint,Enum.EasingDirection.Out):Play()
 p:Dialog{
 
-Title="Close Window",
-Content="Do you want to close this window? You will not be able to open it again.",
+Title="Snow中心",
+Content="是否要关闭?",
 Buttons={
 {
-Title="Cancel",
+Title="手滑",
 
 Callback=function()end,
 Variant="Secondary",
 },
 {
-Title="Close Window",
+Title="关闭",
 
 Callback=function()p:Close():Destroy()end,
 Variant="Primary",
@@ -7421,7 +7421,7 @@ local ai=gethui and gethui()or game.CoreGui
 
 
 aa.ScreenGui=ae("ScreenGui",{
-Name="SnowUI",
+Name="WindUI",
 Parent=ai,
 IgnoreGuiInset=true,
 ScreenInsets="None",
@@ -7450,12 +7450,12 @@ Name="ToolTips"
 })
 
 aa.NotificationGui=ae("ScreenGui",{
-Name="SnowUI/Notifications",
+Name="WindUI/Notifications",
 Parent=ai,
 IgnoreGuiInset=true,
 })
 aa.DropdownGui=ae("ScreenGui",{
-Name="SnowUI/Dropdowns",
+Name="WindUI/Dropdowns",
 Parent=ai,
 IgnoreGuiInset=true,
 })
@@ -7473,7 +7473,7 @@ local ak=aj.Init(aa.NotificationGui)
 function aa.Notify(b,e)
 e.Holder=ak.Frame
 e.Window=aa.Window
-e.SnowUI=aa
+e.WindUI=aa
 return aj.New(e)
 end
 
@@ -7518,7 +7518,7 @@ end
 
 
 function aa.Popup(b,e)
-e.SnowUI=aa
+e.WindUI=aa
 return a.load'h'.new(e)
 end
 
@@ -7526,8 +7526,8 @@ end
 function aa.CreateWindow(b,e)
 local g=a.load'E'
 
-if not isfolder"SnowUI"then
-makefolder"SnowUI"
+if not isfolder"WindUI"then
+makefolder"WindUI"
 end
 if e.Folder then
 makefolder(e.Folder)
@@ -7535,7 +7535,7 @@ else
 makefolder(e.Title)
 end
 
-e.SnowUI=aa
+e.WindUI=aa
 e.Parent=aa.ScreenGui.Window
 
 if aa.Window then
